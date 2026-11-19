@@ -294,6 +294,10 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .gou{font-size:12px;color:var(--muted)}
 #gEmail{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;width:100%;box-sizing:border-box}
 .gorgmsg{font-size:13px!important;color:var(--muted)}
+.gdica{font-size:12.5px!important;color:var(--muted);text-align:left}
+.gqr{font-size:12.5px!important;color:var(--muted);margin-top:6px!important;padding-top:12px!important;border-top:1.5px solid var(--line)}
+body.equipe .step{cursor:default}
+body.equipe #goal{background:transparent}
 .gorgmsg.err{color:#c0392b}
 .qrov{position:fixed;inset:0;z-index:60;background:rgba(0,20,60,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 .qrbox{background:#fff;color:#0b1a33;border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:380px;text-align:center}
@@ -366,15 +370,16 @@ body.membro .tabs{margin-bottom:4px}
 
 <div class="gate" id="gate" hidden><div class="gbox">
   <div class="kick">Hub SENAI</div><h1>Quadro da sprint</h1>
-  <p id="gMsg">Para acompanhar pelo celular, escaneie o QR code mostrado na tela da reunião.</p>
-  <button id="gAdmin" class="glink">Entrar como organizador</button>
-  <div class="gorg" id="gOrg" hidden>
-    <button id="gGoogle" class="gbtn">Entrar com Google</button>
-    <div class="gou">ou receba um link no seu e-mail institucional</div>
+  <p id="gMsg">Entre com o seu e-mail institucional.</p>
+  <div class="gorg" id="gOrg">
     <input id="gEmail" type="email" inputmode="email" autocomplete="email" placeholder="seu.nome@al.senai.br">
-    <button id="gLink" class="gbtn alt">Enviar link de acesso</button>
+    <button id="gLink" class="gbtn">Entrar com e-mail institucional</button>
+    <p class="gdica">Você recebe um link de acesso. No Outlook ele costuma cair no <b>lixo eletrônico</b>: confira lá. Abra o link neste mesmo aparelho; o acesso fica salvo.</p>
     <p id="gOrgMsg" class="gorgmsg"></p>
+    <div class="gou">ou</div>
+    <button id="gGoogle" class="gbtn alt">Entrar com Google</button>
   </div>
+  <p class="gqr">Na reunião, pelo celular: escaneie o QR code mostrado na tela.</p>
 </div></div>
 <div class="qrov" id="qrov" hidden><div class="qrbox">
   <h2>Acompanhe pelo celular</h2><div id="qrc"></div>
@@ -532,7 +537,7 @@ function seedLocal(){let ts=1;COLS.forEach(c=>{if(!c.min)D.cards[c.id+"-q"]={col
 function saveLocal(){if(mode!=="local")return;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}}
 
 /* escrita: um documento por cartão, por pessoa (horas, descrição) e por anotação */
-async function put(coll,id,data){
+async function put(coll,id,data){if(coll==="meta"&&!ADMIN){toast("Objetivo e etapa: só o organizador muda.");render();return}
   if(coll==="meta"){D.meta={...D.meta,...data}}else if(coll==="daily"){D.daily={...D.daily,...data}}else{D[coll][id]=data}
   if(mode==="shared"){try{await (coll==="meta"?db.doc("board/meta").set({...D.meta}):coll==="daily"?db.doc("board/daily").set({...D.daily}):db.collection(coll).doc(id).set(data))}catch(e){falha(e)}}
   else{saveLocal();render()}
@@ -542,7 +547,7 @@ async function del(coll,id){
   if(mode==="shared"){try{await db.collection(coll).doc(id).delete()}catch(e){falha(e)}}
   else{saveLocal();render()}
 }
-function falha(e){if(e&&e.code==="permission-denied"&&!ADMIN){gate("Seu acesso terminou. Escaneie o QR da reunião.");return}
+function falha(e){if(e&&e.code==="permission-denied"&&EQUIPE){toast("Isso só o organizador pode mudar.");return}if(e&&e.code==="permission-denied"&&!ADMIN){gate("Seu acesso terminou. Escaneie o QR da reunião.");return}
   if(e&&e.code==="invalid_argument"&&!readOnly){readOnly=true;setSync("Somente leitura: esta conta não pode editar o quadro","warn");render()}
   else toast("Não salvou: "+(e&&e.message||"erro de conexão"));
 }
@@ -886,18 +891,20 @@ function startLocal(motivo){
   setSync(motivo,"warn");render();
 }
 const FB={apiKey:"AIzaSyDlhylyb6J-G66BL720yv6wWpLKqIk0z6k",authDomain:"quadro-sprint-hub-495e6.firebaseapp.com",projectId:"quadro-sprint-hub-495e6",storageBucket:"quadro-sprint-hub-495e6.firebasestorage.app",messagingSenderId:"640645428424",appId:"1:640645428424:web:9e06b3c4f0c768cba921fd"};
-let ADMIN=false,AUTH=null;
-function gate(msg){$("gate").hidden=false;$("gMsg").textContent=msg||"Para acompanhar pelo celular, escaneie o QR code mostrado na tela da reunião.";setSync("Sem acesso","warn")}
+let ADMIN=false,EQUIPE=false,AUTH=null;
+function gate(msg){$("gate").hidden=false;$("gMsg").textContent=msg||"Entre com o seu e-mail institucional.";setSync("Sem acesso","warn")}
+function destacar(id){let st=document.getElementById("meuSt");if(!st){st=document.createElement("style");st.id="meuSt";document.head.appendChild(st)}
+  st.textContent=id&&/^[a-z0-9_-]+$/i.test(id)?"#lane-"+id+"{outline:3px solid #ed741e;outline-offset:3px;border-radius:10px}#col-"+id+"{outline:3px solid #ed741e;outline-offset:2px}":""}
 async function start(){
   render();setSync("Conectando…","");
   if(!window.firebase){gate("Não foi possível conectar ao servidor. Recarregue a página.");return}
   firebase.initializeApp(FB);AUTH=firebase.auth();const fs=firebase.firestore();
   try{fs.settings({ignoreUndefinedProperties:true,merge:true})}catch(e){}
+  try{await AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}
   const q=new URLSearchParams(location.search);const code=q.get("c");const pessoa=q.get("p");
   if(code||pessoa)try{history.replaceState(null,"",location.pathname+(location.hash||""))}catch(e){}
   const DOM=/^[^@\s]+@(al\.senai\.br|sistemafiea\.com\.br)$/i;
   const oMsg=(t,err)=>{$("gOrgMsg").textContent=t||"";$("gOrgMsg").classList.toggle("err",!!err)};
-  $("gAdmin").onclick=()=>{$("gOrg").hidden=!$("gOrg").hidden;if(!$("gOrg").hidden)$("gEmail").focus()};
   $("gGoogle").onclick=async()=>{oMsg("");try{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});await AUTH.signInWithPopup(p)}catch(e){oMsg("Não foi possível entrar: "+(e.code||e.message),true)}};
   const enviar=async()=>{const em=$("gEmail").value.trim().toLowerCase();
     if(!DOM.test(em)){oMsg("Use o seu e-mail institucional (@al.senai.br ou @sistemafiea.com.br).",true);return}
@@ -911,7 +918,7 @@ async function start(){
   if(AUTH.isSignInWithEmailLink(location.href)){let em="";try{em=localStorage.getItem("quadro-email")||""}catch(e){}
     if(!em)em=(prompt("Para confirmar, digite o seu e-mail institucional:")||"").trim().toLowerCase();
     try{await AUTH.signInWithEmailLink(em,location.href);try{localStorage.removeItem("quadro-email")}catch(e){}}
-    catch(e){gate("Este link não vale mais. Peça um novo em \"Entrar como organizador\".")}
+    catch(e){gate("Este link não vale mais. Peça um novo abaixo.")}
     try{history.replaceState(null,"",location.pathname+"#daily")}catch(e){}}
   $("outBtn").onclick=async()=>{try{localStorage.removeItem("quadro-eu")}catch(e){}await AUTH.signOut();location.reload()};
   $("qrBtn").onclick=()=>makeQR(fs);
@@ -924,8 +931,16 @@ async function start(){
   let started=false;
   AUTH.onAuthStateChanged(async u=>{
     if(!u){if(code){try{await AUTH.signInAnonymously()}catch(e){gate("Não foi possível entrar. Escaneie o QR de novo.")}}else gate();return}
-    if(!u.isAnonymous&&!DOM.test(u.email||"")){const e=u.email||"essa conta";await AUTH.signOut();gate();$("gOrg").hidden=false;oMsg("Organizador só entra com e-mail @al.senai.br ou @sistemafiea.com.br ("+e+" não serve).",true);return}
-    ADMIN=!u.isAnonymous;
+    if(!u.isAnonymous){const em=(u.email||"").toLowerCase();
+      const fora=async t=>{await AUTH.signOut();gate();oMsg(t,true)};
+      if(!DOM.test(em)){await fora("Entre com o e-mail institucional (@al.senai.br ou @sistemafiea.com.br). "+(em||"Essa conta")+" não serve.");return}
+      let ac=null;try{const d=await fs.collection("acesso").doc(em).get();if(d.exists)ac=d.data()}catch(e){}
+      if(!ac){await fora(em+" não está na lista da equipe deste quadro. Se deveria estar, fale com o organizador.");return}
+      ADMIN=ac.org===true;EQUIPE=!ADMIN;
+      if(ac.raia){MEU=ac.raia;try{localStorage.setItem("quadro-eu",MEU)}catch(e){}}
+      if(EQUIPE){document.body.classList.add("equipe");$("goal").readOnly=true;destacar(MEU);
+        let n=0;const iv=setInterval(()=>{const l=document.getElementById("lane-"+MEU);if(l||++n>60){clearInterval(iv);if(l)l.scrollIntoView({behavior:"smooth",block:"center"})}},250)}
+    }
     if(u.isAnonymous){
       if(code){try{const cd=await fs.collection("codigos").doc(code).get();
           if(!cd.exists||cd.data().ate.toMillis()<Date.now()){gate("Este QR code já expirou. Escaneie o da reunião de hoje.");return}
@@ -958,7 +973,7 @@ function subscribe(){
   const late=setTimeout(()=>{if(!ok)setSync("O quadro não respondeu ainda: o que aparece pode estar desatualizado","warn")},10000);
   const seen=new Set();
   const done=(k,snap)=>{if(ok||!snap||!snap.metadata||snap.metadata.fromCache||seen.has(k))return;seen.add(k);if(seen.size>=pend||k==="cards"){ok=true;clearTimeout(late);setSync("Ao vivo: todos veem as mesmas mudanças","ok")}};
-  const err=e=>{clearTimeout(late);if(e&&e.code==="permission-denied"&&!ADMIN)gate("Seu acesso terminou. Escaneie o QR da reunião.");else setSync("Conexão com o quadro caiu: recarregue a página","warn")};
+  const err=e=>{clearTimeout(late);if(e&&e.code==="permission-denied"&&!ADMIN)gate("Seu acesso terminou. Entre de novo ou escaneie o QR da reunião.");else setSync("Conexão com o quadro caiu: recarregue a página","warn")};
   db.doc("board/equipe").onSnapshot(snap=>{COLS=(snap.exists&&snap.data().cols)||[];COLS.forEach(c=>{if(c.min&&MIN[c.id]===undefined)MIN[c.id]=true});render();done("equipe",snap)},err);
   db.doc("board/daily").onSnapshot(snap=>{D.daily=snap.exists?snap.data():{};render();done("daily",snap)},err);
   for(const k of ["cards","hrs","srcs","park","deps","dly","mov"]){

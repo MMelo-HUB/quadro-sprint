@@ -1,19 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Organizador: qualquer conta com e-mail @al.senai.br ou @sistemafiea.com.br verificado (Google ou link por e-mail).
-    function admin() {
+    // Login por e-mail institucional verificado (Google ou link por e-mail).
+    function email() {
+      return request.auth.token.get('email', '').lower();
+    }
+    function verificado() {
       return request.auth != null
         && request.auth.token.get('email_verified', false) == true
-        && request.auth.token.get('email', '').matches('.*@(al[.]senai[.]br|sistemafiea[.]com[.]br)$');
+        && email().matches('.*@(al[.]senai[.]br|sistemafiea[.]com[.]br)$');
+    }
+    // A lista de quem entra mora no banco (acesso/{email}), nunca no código.
+    function naLista() {
+      return verificado() && exists(/databases/$(database)/documents/acesso/$(email()));
+    }
+    function admin() {
+      return naLista() && get(/databases/$(database)/documents/acesso/$(email())).data.get('org', false) == true;
     }
     function codigo(c) {
       return get(/databases/$(database)/documents/codigos/$(c)).data;
     }
-    function membro() {
+    // Celular da reunião: acesso do dia pelo QR.
+    function celular() {
       return request.auth != null
         && exists(/databases/$(database)/documents/acessos/$(request.auth.uid))
         && get(/databases/$(database)/documents/acessos/$(request.auth.uid)).data.ate > request.time;
+    }
+    function equipe() {
+      return naLista() || celular();
+    }
+
+    // Lista de acesso: só o organizador lê toda e mexe; cada um lê só a própria linha.
+    match /acesso/{em} {
+      allow get: if admin() || (verificado() && email() == em);
+      allow list, create, update, delete: if admin();
     }
 
     // Código do QR: quem tem o código lê só aquele documento; ninguém lista.
@@ -33,9 +53,16 @@ service cloud.firestore {
         && request.resource.data.ate == codigo(request.resource.data.codigo).ate;
     }
 
-    // Dados do quadro: organizador sempre; celular só enquanto o acesso do dia vale.
+    // board: todos da equipe leem; a daily todos escrevem; objetivo, etapa e elenco só o organizador.
+    match /board/{doc} {
+      allow read: if equipe();
+      allow write: if admin() || (doc == 'daily' && equipe());
+    }
+
+    // Dados do quadro (cartões, horas, movimentações, status da daily...): organizador e equipe.
     match /{coll}/{doc} {
-      allow read, write: if coll != 'codigos' && coll != 'acessos' && (admin() || membro());
+      allow read, write: if coll != 'codigos' && coll != 'acessos' && coll != 'acesso' && coll != 'board'
+        && equipe();
     }
   }
 }

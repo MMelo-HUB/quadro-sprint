@@ -287,6 +287,14 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .gbox h1{margin:0;font-family:var(--display);font-weight:400;font-size:34px;text-transform:uppercase;color:var(--blue2)}
 .gbox p{margin:0;font-size:15px;line-height:1.45}
 .glink{border:0;background:none;color:var(--muted);font-size:12px;text-decoration:underline;margin-top:8px}
+.gorg{display:flex;flex-direction:column;gap:10px;margin-top:4px;padding-top:14px;border-top:1.5px solid var(--line)}
+.gbtn{border:0;border-radius:8px;padding:11px 14px;font-weight:700;font-size:14px;background:var(--blue2);color:#fff;cursor:pointer}
+.gbtn.alt{background:var(--orange,#f07c00)}
+.gbtn:disabled{opacity:.6;cursor:default}
+.gou{font-size:12px;color:var(--muted)}
+#gEmail{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;width:100%;box-sizing:border-box}
+.gorgmsg{font-size:13px!important;color:var(--muted)}
+.gorgmsg.err{color:#c0392b}
 .qrov{position:fixed;inset:0;z-index:60;background:rgba(0,20,60,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 .qrbox{background:#fff;color:#0b1a33;border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:380px;text-align:center}
 .qrbox h2{margin:0;font-family:var(--display);font-weight:400;font-size:28px;text-transform:uppercase;color:#0047cf}
@@ -360,6 +368,13 @@ body.membro .tabs{margin-bottom:4px}
   <div class="kick">Hub SENAI</div><h1>Quadro da sprint</h1>
   <p id="gMsg">Para acompanhar pelo celular, escaneie o QR code mostrado na tela da reunião.</p>
   <button id="gAdmin" class="glink">Entrar como organizador</button>
+  <div class="gorg" id="gOrg" hidden>
+    <button id="gGoogle" class="gbtn">Entrar com Google</button>
+    <div class="gou">ou receba um link no seu e-mail institucional</div>
+    <input id="gEmail" type="email" inputmode="email" autocomplete="email" placeholder="seu.nome@al.senai.br">
+    <button id="gLink" class="gbtn alt">Enviar link de acesso</button>
+    <p id="gOrgMsg" class="gorgmsg"></p>
+  </div>
 </div></div>
 <div class="qrov" id="qrov" hidden><div class="qrbox">
   <h2>Acompanhe pelo celular</h2><div id="qrc"></div>
@@ -880,7 +895,24 @@ async function start(){
   try{fs.settings({ignoreUndefinedProperties:true,merge:true})}catch(e){}
   const q=new URLSearchParams(location.search);const code=q.get("c");const pessoa=q.get("p");
   if(code||pessoa)try{history.replaceState(null,"",location.pathname+(location.hash||""))}catch(e){}
-  $("gAdmin").onclick=async()=>{try{await AUTH.signInWithPopup(new firebase.auth.GoogleAuthProvider())}catch(e){gate("Não foi possível entrar: "+(e.code||e.message))}};
+  const DOM=/^[^@\s]+@(al\.senai\.br|sistemafiea\.com\.br)$/i;
+  const oMsg=(t,err)=>{$("gOrgMsg").textContent=t||"";$("gOrgMsg").classList.toggle("err",!!err)};
+  $("gAdmin").onclick=()=>{$("gOrg").hidden=!$("gOrg").hidden;if(!$("gOrg").hidden)$("gEmail").focus()};
+  $("gGoogle").onclick=async()=>{oMsg("");try{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});await AUTH.signInWithPopup(p)}catch(e){oMsg("Não foi possível entrar: "+(e.code||e.message),true)}};
+  const enviar=async()=>{const em=$("gEmail").value.trim().toLowerCase();
+    if(!DOM.test(em)){oMsg("Use o seu e-mail institucional (@al.senai.br ou @sistemafiea.com.br).",true);return}
+    $("gLink").disabled=true;oMsg("Enviando…");
+    try{await AUTH.sendSignInLinkToEmail(em,{url:location.origin+location.pathname,handleCodeInApp:true});
+      try{localStorage.setItem("quadro-email",em)}catch(e){}
+      oMsg("Pronto: o link foi para "+em+". Abra o e-mail neste mesmo aparelho e clique nele. Pode cair no lixo eletrônico.")}
+    catch(e){oMsg(e.code==="auth/quota-exceeded"?"O limite de links de hoje acabou. Tente amanhã ou entre com Google.":"Não foi possível enviar: "+(e.code||e.message),true)}
+    $("gLink").disabled=false};
+  $("gLink").onclick=enviar;$("gEmail").onkeydown=e=>{if(e.key==="Enter")enviar()};
+  if(AUTH.isSignInWithEmailLink(location.href)){let em="";try{em=localStorage.getItem("quadro-email")||""}catch(e){}
+    if(!em)em=(prompt("Para confirmar, digite o seu e-mail institucional:")||"").trim().toLowerCase();
+    try{await AUTH.signInWithEmailLink(em,location.href);try{localStorage.removeItem("quadro-email")}catch(e){}}
+    catch(e){gate("Este link não vale mais. Peça um novo em \"Entrar como organizador\".")}
+    try{history.replaceState(null,"",location.pathname+"#daily")}catch(e){}}
   $("outBtn").onclick=async()=>{try{localStorage.removeItem("quadro-eu")}catch(e){}await AUTH.signOut();location.reload()};
   $("qrBtn").onclick=()=>makeQR(fs);
   $("qrBig").onclick=()=>makeQR(fs);
@@ -892,6 +924,7 @@ async function start(){
   let started=false;
   AUTH.onAuthStateChanged(async u=>{
     if(!u){if(code){try{await AUTH.signInAnonymously()}catch(e){gate("Não foi possível entrar. Escaneie o QR de novo.")}}else gate();return}
+    if(!u.isAnonymous&&!DOM.test(u.email||"")){const e=u.email||"essa conta";await AUTH.signOut();gate();$("gOrg").hidden=false;oMsg("Organizador só entra com e-mail @al.senai.br ou @sistemafiea.com.br ("+e+" não serve).",true);return}
     ADMIN=!u.isAnonymous;
     if(u.isAnonymous){
       if(code){try{const cd=await fs.collection("codigos").doc(code).get();

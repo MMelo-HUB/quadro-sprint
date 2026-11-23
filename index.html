@@ -299,6 +299,9 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .blo{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.blo label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
 .blf{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:2px}.blf small{color:var(--muted)}
 .blok{border:1.5px solid var(--ok);border-radius:8px;background:var(--paper);color:var(--ok);padding:5px 10px;cursor:pointer;font-weight:700}
+.blg{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px}.blg li span:first-child small{color:var(--muted)}
+.blbt{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.blbt button{font-size:11px;padding:2px 8px}
+.bltag{color:var(--ok);font-weight:700;margin-left:6px}
 .blin{border:0;border-radius:8px;background:var(--ok);color:var(--paper);padding:6px 12px;cursor:pointer;font-weight:700}
 .blsum{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px}.blsum input{width:60px;font:inherit;padding:4px 6px}.blover{color:var(--no)}
 .bladd{display:flex;gap:6px;flex-wrap:wrap}.bladd input{flex:1;min-width:160px;font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:8px}.bladd button{border:0;border-radius:8px;background:var(--blue2);color:var(--paper);padding:0 14px;cursor:pointer}
@@ -654,7 +657,7 @@ function render(){const dl=$("projs");if(dl)dl.innerHTML=projList().map(p=>`<opt
 function addRetro(k){const i=$("ri-"+k);if(!i)return;const t=i.value.trim();if(!t||readOnly)return;i.value="";const me=(typeof MEU!=="undefined"&&MEU)?((COLS.find(c=>c.id===MEU)||{}).n||""):"";put("retro",k+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),{k,t,por:me,ts:Date.now()})}
 document.addEventListener("keydown",e=>{const t=e.target;if(e.key==="Enter"&&t&&t.dataset&&t.dataset.rk){e.preventDefault();e.stopPropagation();addRetro(t.dataset.rk)}},true);
 document.addEventListener("click",e=>{const a=e.target.closest("[data-radd]");if(a){addRetro(a.dataset.radd);return}const d=e.target.closest("[data-rdel]");if(d&&!readOnly){del("retro",d.dataset.rdel);return}});
-document.addEventListener("click",e=>{const b=e.target.closest("[data-carry]");if(!b||readOnly)return;const id=b.dataset.carry,c=D.cards[id];if(!c)return;put("cards",id,{...c,sp:"23/11",s:"?"});toast("Levada para a planning")});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-carry]");if(!b||readOnly)return;const id=b.dataset.carry,c=D.cards[id];if(!c)return;put("cards",id,{...c,sp:"23/11",s:"?",veio:1});toast("Levada para a planning")});
 function drawRev(){const v=$("vRev");if(typeof ADMIN!=="undefined"&&!ADMIN){v.innerHTML="";return}
   const G={conc:[],and:[],trav:[],nao:[]};
   const grp=(id,c)=>{const d=D.dly[id];if(d&&d.st==="conc")return "conc";if(d&&d.st==="and")return "and";if(d&&d.st==="trav")return "trav";return "nao"};
@@ -687,9 +690,14 @@ function drawBacklog(v){const me=MEU;const nmc=(COLS.find(c=>c.id===me)||{}).n||
   const hv=(D.hrs[me]&&D.hrs[me].v)||"";const soma=novas.reduce((t,[,c])=>t+(+c.esf||0),0);const sem=novas.filter(([,c])=>!c.esf).length;
   const dlab=d=>{const s=(D.dly[d]||{}).st;return s==="and"?"em andamento":s==="trav"?"travada":"não iniciada"};
   let h='<div class="mtop"><div><div class="kick">Planning · sprint de 23/11 a 02/12</div><h1 class="mh">'+esc(nmc)+' · meu backlog</h1></div><span><button class="ghost" data-modo="daily">Ver a daily</button> <button class="ghost" data-eu="">Trocar</button></span></div>';
-  h+='<section class="msec bl"><h2>O que concluí na sprint anterior<small>'+feitas.length+' de '+totAnt+'</small></h2>'+(feitas.length?'<ul class="blf">'+feitas.map(([id,c])=>'<li>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+'</li>').join('')+'</ul>':'<span class="empty">Nenhuma marcada como concluída.</span>')+'</section>';
-  h+='<section class="msec bl"><h2>Da sprint anterior, não concluídas<small>'+velhas.length+'</small></h2><p class="bln">Concluiu e não atualizou? Clique em Já concluí. Se não: por que não foi concluída, e ainda é prioridade? Se sim, entra nesta sprint.</p>'+
-    (velhas.map(([id,c])=>'<div class="blr"><div><b>'+esc(c.t)+'</b>'+(c.proj?'<span class="proj">'+esc(c.proj)+'</span>':'')+'<small>'+dlab(id)+'</small></div><span><button class="blok" data-blok="'+id+'">Já concluí</button> <button class="blin" data-blin="'+id+'">Entra</button> <button class="ghost" data-blout="'+id+'">Sai</button></span></div>').join('')||'<span class="empty">Nada pendente.</span>')+'</section>';
+  const ant=mine.filter(([,c])=>c.s==="sim"&&(!c.sp||c.veio||c.sp==="fora"));
+  const G={conc:[],and:[],trav:[],nao:[]};ant.forEach(([id,c])=>{const st=(D.dly[id]||{}).st;G[st==="conc"?"conc":st==="and"?"and":st==="trav"?"trav":"nao"].push([id,c])});
+  const ta=ant.length,pa=ta?Math.round(G.conc.length/ta*100):0;
+  const acao=(id,c)=>c.sp===SPN?' <small class="bltag">✓ nesta sprint</small>':c.sp==="fora"?' <small class="bltag">fora</small>':' <span class="blbt"><button class="blok" data-blok="'+id+'">Já concluí</button><button class="blin" data-blin="'+id+'">Entra</button><button class="ghost" data-blout="'+id+'">Sai</button></span>';
+  const grp=(k,t)=>G[k].length?'<h4 class="h-'+k+'">'+t+' ('+G[k].length+')</h4><ul class="blg">'+G[k].map(([id,c])=>'<li><span>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+'</span>'+(k==="conc"?'':acao(id,c))+'</li>').join('')+'</ul>':'';
+  h+='<section class="msec bl rp"><h2>Sprint anterior · 10 a 18/11</h2><span class="bar"><i style="width:'+pa+'%"></i></span><div><b>'+G.conc.length+'</b> de '+ta+' concluídas ('+pa+'%) · '+G.and.length+' em andamento · '+G.trav.length+' travadas · '+G.nao.length+' não iniciadas</div>'+
+    '<p class="bln">Concluiu e não atualizou? Clique em Já concluí. Se não: por que não foi concluída, e ainda é prioridade? Se sim, Entra nesta sprint; se não, Sai.</p>'+
+    grp("conc","Concluídas")+grp("and","Em andamento")+grp("trav","Travadas")+grp("nao","Não iniciadas")+'</section>';
   h+='<section class="msec bl"><h2>Nesta sprint<small>'+novas.length+'</small></h2>'+
     '<div class="blsum"><label>Horas livres até 02/12 <input id="blh" data-blh="1" inputmode="numeric" value="'+esc(hv)+'" placeholder="__"></label><span>Esforço somado: <b class="'+(hv&&soma>+hv?'blover':'')+'">'+soma+'h</b>'+(hv?' de '+esc(hv)+'h':'')+(sem?' · '+sem+' sem estimativa':'')+'</span></div>'+
     (novas.map(([id,c])=>'<div class="blr"><div><b>'+esc(c.t)+'</b>'+(c.proj?'<span class="proj">'+esc(c.proj)+'</span>':'')+'</div><span class="blo"><label>Prioridade<select data-blf="pri" data-blk="'+id+'">'+opt(PRI,c.pri)+'</select></label><label>Esforço<select data-blf="esf" data-blk="'+id+'">'+opt(ESF,c.esf)+'</select></label><label>Prazo<select data-blf="fim" data-blk="'+id+'">'+opt(DIAS,c.fim)+'</select></label><button class="ghost" data-blout="'+id+'" title="Tirar da sprint">×</button></span></div>').join('')||'<span class="empty">Nenhuma ação ainda.</span>')+
@@ -701,7 +709,7 @@ document.addEventListener("click",e=>{
   const m=e.target.closest("[data-modo]");if(m){MODO_EU=m.dataset.modo;render();return}
   if(readOnly)return;
   const k=e.target.closest("[data-blok]");if(k){setSt(k.dataset.blok,"conc");toast("Marcada como concluída");return}
-  const a=e.target.closest("[data-blin]");if(a){const c=D.cards[a.dataset.blin];if(c)put("cards",a.dataset.blin,{...c,sp:SPN,s:"sim"});return}
+  const a=e.target.closest("[data-blin]");if(a){const c=D.cards[a.dataset.blin];if(c)put("cards",a.dataset.blin,{...c,sp:SPN,s:"sim",veio:1});return}
   const o=e.target.closest("[data-blout]");if(o){const c=D.cards[o.dataset.blout];if(c)put("cards",o.dataset.blout,{...c,sp:"fora"});return}
   if(e.target.closest("[data-bladd]"))blAdd()});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&(e.target.id==="blt"||e.target.id==="blp")){e.preventDefault();e.stopPropagation();blAdd()}},true);

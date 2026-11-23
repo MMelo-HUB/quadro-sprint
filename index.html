@@ -649,7 +649,7 @@ function drawRev(){const v=$("vRev");
   const per={};COLS.forEach(c=>per[c.id]={conc:[],and:[],trav:[],nao:[]});
   all.forEach(([id,c])=>{const g=grp(id,c);G[g].push(c);(per[c.col]||(per[c.col]={conc:[],and:[],trav:[],nao:[]}))[g].push(c)});
   const tot=all.length,pc=tot?Math.round(G.conc.length/tot*100):0;
-  const adm=(typeof ADMIN==='undefined'||ADMIN)&&!readOnly;const li=(c)=>{const id=Object.keys(D.cards).find(k=>D.cards[k]===c);const it=c.sp==='23/11';return '<li>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+(adm&&id&&!c._ok&&c.dlyst!=='conc'?(it?' <small>✓ na planning</small>':' <button class="carry" data-carry="'+id+'">Levar para a planning</button>'):'')+'</li>'};
+  const adm=(typeof ADMIN==='undefined'||ADMIN)&&!readOnly;const li=(c)=>{const id=Object.keys(D.cards).find(k=>D.cards[k]===c);const it=c.sp==='23/11';return '<li>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+(adm&&id&&!(D.dly[id]&&D.dly[id].st==='conc')?(it?' <small>✓ na planning</small>':' <button class="carry" data-carry="'+id+'">Levar para a planning</button>'):'')+'</li>'};
   const blk=(arr,k,t)=>arr.length?'<h4 class="h-'+k+'">'+t+' ('+arr.length+')</h4><ul>'+arr.map(li).join('')+'</ul>':'';
   const ids=Object.keys(per).filter(k=>Object.values(per[k]).some(a=>a.length));
   v.innerHTML='<header><div class="kick">Hub SENAI · revisão da sprint de 10 a 18/11</div><h1>Resultado da sprint</h1></header>'+

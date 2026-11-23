@@ -301,6 +301,8 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .blok{border:1.5px solid var(--ok);border-radius:8px;background:var(--paper);color:var(--ok);padding:5px 10px;cursor:pointer;font-weight:700}
 .blg{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px}.blg li span:first-child small{color:var(--muted)}
 .blbt{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.blbt button{font-size:11px;padding:2px 8px}
+.blti{font:inherit;font-weight:700;border:1px solid transparent;border-radius:6px;padding:3px 6px;background:transparent}.blpi{font:inherit;font-size:13px;color:var(--muted);border:1px solid transparent;border-radius:6px;padding:2px 6px;background:transparent}.blti:hover,.blpi:hover,.blti:focus,.blpi:focus{border-color:var(--line);background:var(--paper)}
+.blun{font-size:11px;padding:2px 8px}.bltag.fora{color:var(--no)}
 .bltag{color:var(--ok);font-weight:700;margin-left:6px}
 #vEu:not([hidden]):has(.bl){max-width:1280px!important;display:grid!important;grid-template-columns:1fr 1fr;align-items:start;gap:16px}#vEu:has(.bl)>.mtop{grid-column:1/-1}
 @media(max-width:900px){#vEu:not([hidden]):has(.bl){grid-template-columns:1fr}}
@@ -695,14 +697,14 @@ function drawBacklog(v){const me=MEU;const nmc=(COLS.find(c=>c.id===me)||{}).n||
   const ant=mine.filter(([,c])=>c.s==="sim"&&(!c.sp||c.veio||c.sp==="fora"));
   const G={conc:[],and:[],trav:[],nao:[]};ant.forEach(([id,c])=>{const st=(D.dly[id]||{}).st;G[st==="conc"?"conc":st==="and"?"and":st==="trav"?"trav":"nao"].push([id,c])});
   const ta=ant.length,pa=ta?Math.round(G.conc.length/ta*100):0;
-  const acao=(id,c)=>c.sp===SPN?' <small class="bltag">✓ nesta sprint</small>':c.sp==="fora"?' <small class="bltag">fora</small>':' <span class="blbt"><button class="blok" data-blok="'+id+'">Já concluí</button><button class="blin" data-blin="'+id+'">Entra</button><button class="ghost" data-blout="'+id+'">Sai</button></span>';
+  const acao=(id,c)=>c.sp===SPN?' <small class="bltag">✓ nesta sprint</small> <button class="ghost blun" data-blun="'+id+'">Desfazer</button>':c.sp==="fora"?' <small class="bltag fora">fora</small> <button class="ghost blun" data-blun="'+id+'">Desfazer</button>':' <span class="blbt"><button class="blok" data-blok="'+id+'">Já concluí</button><button class="blin" data-blin="'+id+'">Entra</button><button class="ghost" data-blout="'+id+'">Sai</button></span>';
   const grp=(k,t)=>G[k].length?'<h4 class="h-'+k+'">'+t+' ('+G[k].length+')</h4><ul class="blg">'+G[k].map(([id,c])=>'<li><span>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+'</span>'+(k==="conc"?'':acao(id,c))+'</li>').join('')+'</ul>':'';
   h+='<section class="msec bl rp"><h2>Sprint anterior · 10 a 18/11</h2><span class="bar"><i style="width:'+pa+'%"></i></span><div><b>'+G.conc.length+'</b> de '+ta+' concluídas ('+pa+'%) · '+G.and.length+' em andamento · '+G.trav.length+' travadas · '+G.nao.length+' não iniciadas</div>'+
     '<p class="bln">Concluiu e não atualizou? Clique em Já concluí. Se não: por que não foi concluída, e ainda é prioridade? Se sim, Entra nesta sprint; se não, Sai.</p>'+
     grp("conc","Concluídas")+grp("and","Em andamento")+grp("trav","Travadas")+grp("nao","Não iniciadas")+'</section>';
   h+='<section class="msec bl"><h2>Nesta sprint<small>'+novas.length+'</small></h2>'+
     '<div class="blsum"><label>Horas livres até 02/12 <input id="blh" data-blh="1" inputmode="numeric" value="'+esc(hv)+'" placeholder="__"></label><span>Esforço somado: <b class="'+(hv&&soma>+hv?'blover':'')+'">'+soma+'h</b>'+(hv?' de '+esc(hv)+'h':'')+(sem?' · '+sem+' sem estimativa':'')+'</span></div>'+
-    (novas.map(([id,c])=>'<div class="blr"><div><b>'+esc(c.t)+'</b>'+(c.proj?'<span class="proj">'+esc(c.proj)+'</span>':'')+'</div><span class="blo"><label>Prioridade<select data-blf="pri" data-blk="'+id+'">'+opt(PRI,c.pri)+'</select></label><label>Esforço<select data-blf="esf" data-blk="'+id+'">'+opt(ESF,c.esf)+'</select></label><label>Prazo<select data-blf="fim" data-blk="'+id+'">'+opt(DIAS,c.fim)+'</select></label><button class="ghost" data-blout="'+id+'" title="Tirar da sprint">×</button></span></div>').join('')||'<span class="empty">Nenhuma ação ainda.</span>')+
+    (novas.map(([id,c])=>'<div class="blr"><div><input class="blti" id="ble-t-'+id+'" data-blf="t" data-blk="'+id+'" value="'+esc(c.t)+'" aria-label="Ação"><input class="blpi" id="ble-p-'+id+'" data-blf="proj" data-blk="'+id+'" list="projs" value="'+esc(c.proj||"")+'" placeholder="Cliente ou projeto" aria-label="Cliente ou projeto"></div><span class="blo"><label>Prioridade<select data-blf="pri" data-blk="'+id+'">'+opt(PRI,c.pri)+'</select></label><label>Esforço<select data-blf="esf" data-blk="'+id+'">'+opt(ESF,c.esf)+'</select></label><label>Prazo<select data-blf="fim" data-blk="'+id+'">'+opt(DIAS,c.fim)+'</select></label><button class="ghost" data-blout="'+id+'" title="Tirar da sprint">×</button></span></div>').join('')||'<span class="empty">Nenhuma ação ainda.</span>')+
     '<div class="bladd"><input id="blt" placeholder="Nova ação (comece com um verbo)"><input id="blp" list="projs" placeholder="Cliente ou projeto"><button data-bladd="1">Acrescentar</button></div></section>';
   v.innerHTML=h}
 function blAdd(){const t=($("blt")||{}).value||"";if(!t.trim()||readOnly||!MEU)return;const p=($("blp")||{}).value||"";$("blt").value="";$("blp").value="";
@@ -710,13 +712,14 @@ function blAdd(){const t=($("blt")||{}).value||"";if(!t.trim()||readOnly||!MEU)r
 document.addEventListener("click",e=>{
   const m=e.target.closest("[data-modo]");if(m){MODO_EU=m.dataset.modo;render();return}
   if(readOnly)return;
+  const u=e.target.closest("[data-blun]");if(u){const id=u.dataset.blun,c={...D.cards[id]};if(!D.cards[id])return;if(c.veio){delete c.sp;delete c.veio}else c.sp=SPN;put("cards",id,c);toast("Desfeito");return}
   const k=e.target.closest("[data-blok]");if(k){setSt(k.dataset.blok,"conc");toast("Marcada como concluída");return}
   const a=e.target.closest("[data-blin]");if(a){const c=D.cards[a.dataset.blin];if(c)put("cards",a.dataset.blin,{...c,sp:SPN,s:"sim",veio:1});return}
   const o=e.target.closest("[data-blout]");if(o){const c=D.cards[o.dataset.blout];if(c)put("cards",o.dataset.blout,{...c,sp:"fora"});return}
   if(e.target.closest("[data-bladd]"))blAdd()});
-document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&(e.target.id==="blt"||e.target.id==="blp")){e.preventDefault();e.stopPropagation();blAdd()}},true);
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.blf){e.preventDefault();e.stopPropagation();e.target.blur();return}if(e.key==="Enter"&&e.target&&(e.target.id==="blt"||e.target.id==="blp")){e.preventDefault();e.stopPropagation();blAdd()}},true);
 document.addEventListener("change",e=>{const t=e.target;if(!t||!t.dataset||readOnly)return;
-  if(t.dataset.blf){const c=D.cards[t.dataset.blk];if(c)put("cards",t.dataset.blk,{...c,[t.dataset.blf]:t.value});e.stopPropagation();return}
+  if(t.dataset.blf){const c=D.cards[t.dataset.blk];const v=(t.dataset.blf==="t"||t.dataset.blf==="proj")?t.value.replace(/s+/g," ").trim():t.value;if(c&&!(t.dataset.blf==="t"&&!v))put("cards",t.dataset.blk,{...c,[t.dataset.blf]:v});e.stopPropagation();return}
   if(t.dataset.blh&&MEU){put("hrs",MEU,{v:t.value.trim()});e.stopPropagation()}},true);
 
 /* ---------- daily ---------- */

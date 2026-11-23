@@ -302,8 +302,8 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .blg{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:4px}.blg li span:first-child small{color:var(--muted)}
 .blbt{display:inline-flex;gap:4px;margin-left:6px;vertical-align:middle}.blbt button{font-size:11px;padding:2px 8px}
 .bltag{color:var(--ok);font-weight:700;margin-left:6px}
-#vEu:has(.bl){max-width:1280px!important;display:grid!important;grid-template-columns:1fr 1fr;align-items:start;gap:16px}#vEu:has(.bl)>.mtop{grid-column:1/-1}
-@media(max-width:900px){#vEu:has(.bl){grid-template-columns:1fr}}
+#vEu:not([hidden]):has(.bl){max-width:1280px!important;display:grid!important;grid-template-columns:1fr 1fr;align-items:start;gap:16px}#vEu:has(.bl)>.mtop{grid-column:1/-1}
+@media(max-width:900px){#vEu:not([hidden]):has(.bl){grid-template-columns:1fr}}
 .blin{border:0;border-radius:8px;background:var(--ok);color:var(--paper);padding:6px 12px;cursor:pointer;font-weight:700}
 .blsum{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px}.blsum input{width:60px;font:inherit;padding:4px 6px}.blover{color:var(--no)}
 .bladd{display:flex;gap:6px;flex-wrap:wrap}.bladd input{flex:1;min-width:160px;font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:8px}.bladd button{border:0;border-radius:8px;background:var(--blue2);color:var(--paper);padding:0 14px;cursor:pointer}

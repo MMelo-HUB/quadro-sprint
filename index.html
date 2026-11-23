@@ -397,7 +397,7 @@ body.membro .tabs{margin-bottom:4px}
   </div>
   <header class="dhead">
     <div>
-      <div class="kick">Hub SENAI · sprint de 10 a 18/11</div>
+      <div class="kick">Hub SENAI · sprint de 23/11 a 02/12</div>
       <h1 id="dTitle">Daily</h1>
     </div>
     <div class="prog" id="dProg"></div>
@@ -415,7 +415,7 @@ body.membro .tabs{margin-bottom:4px}
   <header>
     <div>
       <div class="kick">Hub SENAI · primeira sprint no novo rito</div>
-      <h1>Planning · sprint de 10 a 18/11</h1>
+      <h1>Planning · sprint de 23/11 a 02/12</h1>
     </div>
     <div class="meta">
       <span class="pill">Hoje, 11h às 12h</span>
@@ -472,21 +472,21 @@ body.membro .tabs{margin-bottom:4px}
 const STEPS=[
  {t:"Abertura",w:"A nova rotina da equipe",l:[
    "Trabalhamos em ciclos curtos, com o que cada um entrega visível para todos",
-   "Sprint: 2 semanas. Esta vai de hoje, 10/11, até 18/11",
-   "Planning: a cada 2 semanas, às sextas, 1h. A próxima é qui 19/11, porque 20/11 é feriado",
-   "Daily: 15 min, todo dia útil, a partir de amanhã",
-   "Revisão e retrospectiva: qua 18/11, fechando a sprint"]},
+   "Sprint: 2 semanas. Esta vai de hoje, 23/11, até 02/12",
+   "Planning: a cada 2 semanas, 1h. A próxima é qua 02/12, junto com a revisão",
+   "Daily: 15 min, todo dia útil, às 11h30",
+   "Revisão e retrospectiva: qua 02/12, fechando a sprint"]},
  {t:"Direção",w:"Para onde vamos nesta sprint",l:[
    "O PO apresenta o objetivo da sprint",
    "E a ordem de prioridade entre os projetos",
    "O PO prioriza e decide o que entra, mas não pega ação",
    "Quando duas coisas disputam o mesmo tempo, vale a prioridade dele"]},
  {t:"Capacidade",w:"Quanto tempo cada um tem",l:[
-   "Cada um preenche na própria coluna as horas livres até 18/11",
+   "Cada um preenche na própria coluna as horas livres até 02/12",
    "Descontando reuniões, visitas, ritos e folgas já marcadas",
    "Número realista, não o ideal"]},
- {t:"Escolha",w:"O que entra até 18/11",l:[
-   "Cada um responde: quais atividades precisam terminar antes de 18/11?",
+ {t:"Escolha",w:"O que entra até 02/12",l:[
+   "Cada um responde: quais atividades precisam terminar antes de 02/12?",
    "A ação começa com verbo, e embaixo vai o cliente ou projeto",
    "Cada ação dura no máximo 2 dias; se for maior, quebrar em partes",
    "Clicando no cartão: início, prazo e esforço",
@@ -498,15 +498,15 @@ const STEPS=[
  {t:"Compromisso",w:"O combinado",l:[
    "Ler em voz alta o que entra para cada um",
    "Cada um copia a própria coluna e guarda",
-   "Daily amanhã, 11/11: o que fiz, o que vou fazer, o que está travando",
-   "Revisão e retrospectiva qua 18/11; próxima planning qui 19/11"]}
+   "Daily amanhã, 24/11: o que fiz, o que vou fazer, o que está travando",
+   "Revisão e retrospectiva qua 02/12; próxima planning no mesmo dia"]}
 ];
-const QQ="Quais atividades precisam ser finalizadas antes do dia 18/11?";
+const QQ="Quais atividades precisam ser finalizadas antes do dia 02/12?";
 /* Colunas. Os cartões moram no banco compartilhado (coleção "cards"); ITENS_LOCAIS só é usado se o banco não responder. */
 let COLS=[];
 const ITENS_LOCAIS={};
 /* dias úteis da sprint e tamanhos de esforço (os mesmos dos quadros de planning de outubro) */
-const DIAS=[["10/11","ter 10/11"],["11/11","qua 11/11"],["12/11","qui 12/11"],["13/11","sex 13/11"],["16/11","seg 16/11"],["17/11","ter 17/11"],["18/11","qua 18/11"]];
+const DIAS=[["23/11","seg 23/11"],["24/11","ter 24/11"],["25/11","qua 25/11"],["26/11","qui 26/11"],["27/11","sex 27/11"],["30/11","seg 30/11"],["01/12","ter 01/12"],["02/12","qua 02/12"]];
 const ESF=[["1","1h · ¼ de turno"],["2","2h · ½ turno"],["4","4h · 1 turno"],["8","8h · 1 dia"],["16","16h · 2 dias"]];
 const opt=(arr,v)=>`<option value="">—</option>`+arr.map(([k,l])=>`<option value="${k}"${k===v?" selected":""}>${l}</option>`).join("");
 function commitEdit(){const ta=document.querySelector("[data-tt]");if(!ta)return;const id=ta.dataset.tt;const c=D.cards[id];if(!c)return;
@@ -587,7 +587,7 @@ function drawBoard(){
     return `<article class="col" id="col-${b.id}">
       <div class="ch"><div class="who"><h2>${b.n}</h2><span class="hbtns"><button class="cpbtn" data-cp="${b.id}" title="Copiar esta coluna" aria-label="Copiar a coluna de ${b.n}">Copiar</button><button class="minbtn" data-min="${b.id}" title="Minimizar" aria-label="Minimizar a coluna de ${b.n}">–</button></span></div>
       <span class="src" id="src-${b.id}" ${readOnly?"":`contenteditable="plaintext-only"`} spellcheck="false" data-src="${b.id}" title="Clique para editar">${esc(src)}</span>
-      <label class="hrs" for="h-${b.id}">Horas livres até 18/11 <input id="h-${b.id}" data-h="${b.id}" inputmode="numeric" value="${esc(hv)}" placeholder="__"${dis}></label>
+      <label class="hrs" for="h-${b.id}">Horas livres até 02/12 <input id="h-${b.id}" data-h="${b.id}" inputmode="numeric" value="${esc(hv)}" placeholder="__"${dis}></label>
       <span class="sum"><b>${n}</b> ${n===1?"item entra":"itens entram"} · ${items.length} no quadro${carga(items,hv)}</span></div>
       <ul class="cards">${items.map(([id,x])=>`<li class="card${EDIT===id?" editing":""}${x.s!=="ask"&&!readOnly?" clickable":""}" data-s="${x.s}" data-card="${id}">
         <span class="acts">${quando(x)}<button class="st" data-x="${id}" title="Mudar marcação"${dis}>${LBL[x.s]||x.s}</button><button class="del" data-d="${id}" aria-label="Apagar item"${dis}>×</button></span>
@@ -797,7 +797,7 @@ document.addEventListener("drop",e=>{const cell=e.target.closest&&e.target.close
   setSt(id,k==="prev"?"hoje":k)});
 document.addEventListener("dragend",()=>{DRAG=null;document.querySelectorAll(".cell.over,.dc.dropb").forEach(x=>x.classList.remove("over","dropb"))});
 function copyDaily(){const s=dstate();const ord=ordemFala().filter(x=>!s.aus.includes(x));const nm=id=>(COLS.find(c=>c.id===id)||{}).n||id;
-  let t=`DAILY · ${DIAHOJE}/2026 · sprint de 10 a 18/11\n`;if(s.aus.length)t+=`Ausentes: ${s.aus.map(nm).join(", ")}\n`;
+  let t=`DAILY · ${DIAHOJE}/2026 · sprint de 23/11 a 02/12\n`;if(s.aus.length)t+=`Ausentes: ${s.aus.map(nm).join(", ")}\n`;
   for(const lid of ord){const it=Object.entries(D.cards).filter(([,c])=>c&&lanesOf(c).includes(lid)&&c.s==="sim").map(([id,c])=>[id,c,colOf(id,c)]);
     t+=`\n${nm(lid).toUpperCase()}\n`;let any=false;
     for(const [k,l] of [["conc","Concluído hoje"],["and","Em andamento"],["trav","Travado"],["prev","Previsto para hoje"]]){const xs=it.filter(x=>x[2]===k);if(!xs.length)continue;any=true;t+=`  ${l}:\n`;
@@ -864,14 +864,14 @@ document.addEventListener("input",e=>{const t=e.target;
   if(t.id==="goal"){const v=t.value;debounce("goal",()=>put("meta",null,{goal:v}),800)}});
 function copyText(s){const out=$("out");out.value=s;out.hidden=false;try{navigator.clipboard.writeText(s).then(()=>toast("Copiado"),()=>{out.select();toast("Selecionado: copie com Ctrl+C")})}catch(err){out.select();toast("Selecionado: copie com Ctrl+C")}}
 function copyCol(cid){const b=COLS.find(c=>c.id===cid);const items=cardsOf(cid).map(([,x])=>x).filter(x=>x.t!==QQ);
-  let s=`${b.n.toUpperCase()} · PLANNING DA SPRINT DE 10 A 18/11/2026\nHoras livres até 18/11: ${(D.hrs[cid]&&D.hrs[cid].v)||"?"}\n`;
+  let s=`${b.n.toUpperCase()} · PLANNING DA SPRINT DE 23/11 A 02/12/2026\nHoras livres até 02/12: ${(D.hrs[cid]&&D.hrs[cid].v)||"?"}\n`;
   if(D.meta.goal)s+=`Objetivo da sprint: ${D.meta.goal}\n`;
   s+="\n"+(items.length?items.map(x=>`[${LBL[x.s]||x.s}] ${x.t}${det(x)}`).join("\n"):"(nenhum item)");
   copyText(s)}
 $("parkBtn").onclick=()=>addList("park");
 $("depsBtn").onclick=()=>addList("deps");
 $("copy").onclick=()=>{
-  let s=`PLANNING · SPRINT DE 10 A 18/11/2026\nObjetivo da sprint: ${D.meta.goal||"(não definido)"}\n`;
+  let s=`PLANNING · SPRINT DE 23/11 A 02/12/2026\nObjetivo da sprint: ${D.meta.goal||"(não definido)"}\n`;
   for(const b of COLS){const items=cardsOf(b.id).map(([,x])=>x);const ent=items.filter(x=>x.s==="sim"),duv=items.filter(x=>x.s==="duv");
     s+=`\n${b.n.toUpperCase()} · horas livres: ${(D.hrs[b.id]&&D.hrs[b.id].v)||"?"}\n`;
     s+=ent.length?ent.map(x=>"  - "+x.t+det(x)).join("\n")+"\n":"  (nada marcado como entra)\n";
@@ -879,7 +879,7 @@ $("copy").onclick=()=>{
   const dl=Object.values(D.deps),pl=Object.values(D.park);
   if(dl.length)s+="\nDEPENDÊNCIAS\n"+dl.map(x=>"  - "+x.t).join("\n")+"\n";
   if(pl.length)s+="\nESTACIONAMENTO\n"+pl.map(x=>"  - "+x.t).join("\n")+"\n";
-  s+="\nPróximos ritos: daily a partir de 11/11 · revisão e retrospectiva em 18/11 · próxima planning em 19/11";
+  s+="\nPróximos ritos: daily a partir de 24/11, às 11h30 · revisão e retrospectiva em 02/12 · próxima planning em 02/12";
   const out=$("out");out.value=s;out.hidden=false;
   try{navigator.clipboard.writeText(s).then(()=>toast("Resultado copiado"),()=>{out.select();toast("Selecionado: copie com Ctrl+C")})}catch(err){out.select();toast("Selecionado: copie com Ctrl+C")}
 };

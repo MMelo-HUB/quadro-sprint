@@ -294,7 +294,11 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .pauta{border-left:5px solid var(--orange);background:var(--warnL);border-radius:8px;padding:10px 14px;font-size:15px}
 .carry{font-size:11px;border:1.5px solid var(--orange);background:var(--paper);color:var(--orange);border-radius:99px;padding:1px 8px;cursor:pointer;margin-left:6px}
 .rretro{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.rretro div{border:2px dashed var(--line);border-radius:12px;padding:12px 14px;min-height:120px}
+.rretro>div{border:2px dashed var(--line);border-radius:12px;padding:12px 14px;min-height:120px;display:flex;flex-direction:column;gap:6px}
+.rretro ul{margin:0;padding-left:16px;font-size:14px}.rretro small{color:var(--muted)}
+.radd{display:flex;gap:6px;margin-top:auto}.radd input{flex:1;font:inherit;padding:6px 8px;border:1.5px solid var(--line);border-radius:8px}.radd button{border:0;border-radius:8px;background:var(--blue2);color:var(--paper);padding:0 12px;font-size:18px;cursor:pointer}
+.rdel{border:0;background:none;color:var(--muted);cursor:pointer}
+.rh{margin:8px 0 0;font-family:var(--display);font-weight:400;text-transform:uppercase;color:var(--blue2)}
 .rretro h3{margin:0 0 4px;font-size:15px;color:var(--orange);text-transform:uppercase}
 @media(max-width:700px){.rretro{grid-template-columns:1fr}}
 
@@ -556,7 +560,7 @@ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",
 const $=id=>document.getElementById(id);
 
 /* ---------- estado ---------- */
-const D={cards:{},hrs:{},srcs:{},park:{},deps:{},dly:{},mov:{},meta:{goal:"",step:0},daily:{}};
+const D={cards:{},hrs:{},srcs:{},park:{},deps:{},dly:{},mov:{},retro:{},meta:{goal:"",step:0},daily:{}};
 let MIN={};try{MIN=JSON.parse(localStorage.getItem("planning-min")||"null")||{}}catch(e){}
 COLS.forEach(c=>{if(c.min&&MIN[c.id]===undefined)MIN[c.id]=true});
 const saveMin=()=>{try{localStorage.setItem("planning-min",JSON.stringify(MIN))}catch(e){}};
@@ -640,6 +644,9 @@ function render(){const dl=$("projs");if(dl)dl.innerHTML=projList().map(p=>`<opt
   keepFocus(()=>{if(VIEW==="plan"){drawSteps();drawBoard();drawLists();if(document.activeElement!==$("goal"))$("goal").value=D.meta.goal||""}else if(VIEW==="rev")drawRev();else if(VIEW==="eu")drawMine();else drawDaily()});$("goal").disabled=readOnly}
 
 /* ---------- revisão: resultado da sprint que está no quadro ---------- */
+function addRetro(k){const i=$("ri-"+k);if(!i)return;const t=i.value.trim();if(!t||readOnly)return;i.value="";const me=(typeof MEU!=="undefined"&&MEU)?((COLS.find(c=>c.id===MEU)||{}).n||""):"";put("retro",k+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),{k,t,por:me,ts:Date.now()})}
+document.addEventListener("keydown",e=>{const t=e.target;if(e.key==="Enter"&&t&&t.dataset&&t.dataset.rk){e.preventDefault();e.stopPropagation();addRetro(t.dataset.rk)}},true);
+document.addEventListener("click",e=>{const a=e.target.closest("[data-radd]");if(a){addRetro(a.dataset.radd);return}const d=e.target.closest("[data-rdel]");if(d&&!readOnly){del("retro",d.dataset.rdel);return}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-carry]");if(!b||readOnly)return;const id=b.dataset.carry,c=D.cards[id];if(!c)return;put("cards",id,{...c,sp:"23/11",s:"?"});toast("Levada para a planning")});
 function drawRev(){const v=$("vRev");
   const G={conc:[],and:[],trav:[],nao:[]};
@@ -656,7 +663,8 @@ function drawRev(){const v=$("vRev");
    '<div class="rtot"><div class="k-conc"><b>'+G.conc.length+'</b><span>Concluídas ('+pc+'%)</span></div><div class="k-and"><b>'+G.and.length+'</b><span>Em andamento</span></div><div class="k-trav"><b>'+G.trav.length+'</b><span>Travadas</span></div><div class="k-nao"><b>'+G.nao.length+'</b><span>Não iniciadas</span></div><div><b>'+tot+'</b><span>Comprometidas</span></div></div>'+
    '<div class="rgrid">'+ids.map(k=>{const p=per[k];const t=p.conc.length+p.and.length+p.trav.length+p.nao.length;const w=t?Math.round(p.conc.length/t*100):0;
      return '<section class="rp"><h3>'+esc(nm(k))+'</h3><span class="bar"><i style="width:'+w+'%"></i></span><div><b>'+p.conc.length+'</b> de '+t+' concluídas</div>'+blk(p.conc,'conc','Concluídas')+blk(p.and,'and','Em andamento')+blk(p.trav,'trav','Travadas')+blk(p.nao,'nao','Não iniciadas')+'</section>'}).join('')+'</div>'+
-   '<div class="pauta"><b>Pauta da planning:</b> as '+(G.and.length+G.trav.length+G.nao.length)+' ações não concluídas abaixo. Para cada uma: por que não foi concluída, e ainda é prioridade? Se sim, entra na sprint de 23/11 a 02/12; se não, sai.</div>'+'<div class="rretro"><div><h3>O que deu certo</h3></div><div><h3>O que travou ou deu errado</h3></div><div><h3>O que muda na próxima sprint</h3></div></div>'}
+   '<div class="pauta"><b>Pauta da planning:</b> as '+(G.and.length+G.trav.length+G.nao.length)+' ações não concluídas abaixo. Para cada uma: por que não foi concluída, e ainda é prioridade? Se sim, entra na sprint de 23/11 a 02/12; se não, sai.</div>'+'<h2 class="rh">Retrospectiva</h2><div class="rretro">'+[["bom","O que deu certo"],["ruim","O que deu errado"],["muda","O que faremos diferente"]].map(([k,t])=>{const xs=Object.entries(D.retro||{}).filter(([,x])=>x&&x.k===k).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
+     return '<div><h3>'+t+'</h3><ul>'+xs.map(([id,x])=>'<li>'+esc(x.t)+(x.por?' <small>· '+esc(x.por)+'</small>':'')+(readOnly?'':' <button class="rdel" data-rdel="'+id+'" aria-label="Remover">×</button>')+'</li>').join('')+'</ul>'+(readOnly?'':'<div class="radd"><input id="ri-'+k+'" data-rk="'+k+'" placeholder="Escreva e tecle Enter"><button data-radd="'+k+'">+</button></div>')+'</div>'}).join('')+'</div>'}
 
 /* ---------- daily ---------- */
 let VIEW="daily";try{const v=location.hash.slice(1)||localStorage.getItem("quadro-view");if(v==="plan"||v==="daily"||v==="eu"||v==="rev")VIEW=v}catch(e){}
@@ -1024,7 +1032,7 @@ function subscribe(){
   const err=e=>{clearTimeout(late);if(e&&e.code==="permission-denied"&&!ADMIN)gate("Seu acesso terminou. Entre de novo ou escaneie o QR da reunião.");else setSync("Conexão com o quadro caiu: recarregue a página","warn")};
   db.doc("board/equipe").onSnapshot(snap=>{COLS=(snap.exists&&snap.data().cols)||[];COLS.forEach(c=>{if(c.min&&MIN[c.id]===undefined)MIN[c.id]=true});render();done("equipe",snap)},err);
   db.doc("board/daily").onSnapshot(snap=>{D.daily=snap.exists?snap.data():{};render();done("daily",snap)},err);
-  for(const k of ["cards","hrs","srcs","park","deps","dly","mov"]){
+  for(const k of ["cards","hrs","srcs","park","deps","dly","mov","retro"]){
     db.collection(k).onSnapshot(snap=>{const o={};snap.docs.forEach(d=>{o[d.id]=d.data()});D[k]=o;render();done(k,snap)},err);
   }
   db.doc("board/meta").onSnapshot(snap=>{D.meta=snap.exists?{goal:"",step:0,...snap.data()}:{goal:"",step:0};render();done("meta",snap)},err);

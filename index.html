@@ -277,6 +277,25 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .hist ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:2px}
 .hist .hm{color:var(--muted);font-variant-numeric:tabular-nums}
 .hist .empty{color:var(--muted)}
+#vRev{display:flex;flex-direction:column;gap:14px}
+#vRev h1{margin:0;font-family:var(--display);font-weight:400;text-transform:uppercase;color:var(--blue2)}
+.rtot{display:flex;gap:10px;flex-wrap:wrap}
+.rtot div{flex:1;min-width:130px;border:1.5px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--paper)}
+.rtot b{display:block;font-size:34px;line-height:1}
+.rtot span{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+.rtot .k-conc b{color:var(--ok)}.rtot .k-and b{color:var(--blue2)}.rtot .k-trav b{color:var(--warn)}.rtot .k-nao b{color:var(--no)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.rp{border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper);display:flex;flex-direction:column;gap:6px}
+.rp h3{margin:0;font-family:var(--display);font-weight:400;font-size:20px;text-transform:uppercase;color:var(--blue2)}
+.rp .bar{display:block;height:8px;border-radius:99px;background:var(--line);overflow:hidden}.rp .bar i{display:block;height:100%;background:var(--ok)}
+.rp h4{margin:6px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+.rp ul{margin:0;padding-left:16px;font-size:13px}.rp li small{color:var(--muted)}
+.rp .h-conc{color:var(--ok)}.rp .h-and{color:var(--blue2)}.rp .h-trav{color:var(--warn)}.rp .h-nao{color:var(--no)}
+.pauta{border-left:5px solid var(--orange);background:var(--warnL);border-radius:8px;padding:10px 14px;font-size:15px}
+.rretro{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rretro div{border:2px dashed var(--line);border-radius:12px;padding:12px 14px;min-height:120px}
+.rretro h3{margin:0 0 4px;font-size:15px;color:var(--orange);text-transform:uppercase}
+@media(max-width:700px){.rretro{grid-template-columns:1fr}}
 
 [hidden]{display:none!important}
 .navb{border:1.5px solid var(--line);background:var(--paper);color:var(--blue2);border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px}
@@ -365,6 +384,7 @@ body.membro .tabs{margin-bottom:4px}
   <button class="tab" role="tab" data-view="eu">Minha raia</button>
   <button class="navb adm" id="qrBtn">QR da reunião</button>
   <button class="navb" id="outBtn">Sair</button>
+  <button class="tab" role="tab" data-view="rev">Revisão</button>
   <span class="pill sync" id="sync" role="status">Conectando…</span>
 </nav>
 
@@ -410,6 +430,8 @@ body.membro .tabs{margin-bottom:4px}
   <section class="hist" id="dHist" hidden aria-label="Histórico da sprint"></section>
   <textarea id="dOut" hidden aria-label="Resultado da daily em texto" style="width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,monospace;border:1.5px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:var(--ink)"></textarea>
 </div>
+
+<div class="wrap" id="vRev" hidden></div>
 
 <div class="wrap" id="vPlan" hidden>
   <header>
@@ -607,11 +629,29 @@ function drawLists(){
     $(k).innerHTML=arr.map(([id,x])=>`<li>${esc(x.t)} ${readOnly?"":`<button data-rm="${k}" data-i="${id}" aria-label="Remover">×</button>`}</li>`).join("")}
 }
 function render(){const dl=$("projs");if(dl)dl.innerHTML=projList().map(p=>`<option value="${esc(p)}"></option>`).join("");
-  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.view===VIEW)));$("vDaily").hidden=VIEW!=="daily";$("vPlan").hidden=VIEW!=="plan";$("vEu").hidden=VIEW!=="eu";document.body.dataset.tela=VIEW;
-  keepFocus(()=>{if(VIEW==="plan"){drawSteps();drawBoard();drawLists();if(document.activeElement!==$("goal"))$("goal").value=D.meta.goal||""}else if(VIEW==="eu")drawMine();else drawDaily()});$("goal").disabled=readOnly}
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.view===VIEW)));$("vDaily").hidden=VIEW!=="daily";$("vPlan").hidden=VIEW!=="plan";$("vEu").hidden=VIEW!=="eu";document.body.dataset.tela=VIEW;$("vRev").hidden=VIEW!=="rev";
+  keepFocus(()=>{if(VIEW==="plan"){drawSteps();drawBoard();drawLists();if(document.activeElement!==$("goal"))$("goal").value=D.meta.goal||""}else if(VIEW==="rev")drawRev();else if(VIEW==="eu")drawMine();else drawDaily()});$("goal").disabled=readOnly}
+
+/* ---------- revisão: resultado da sprint que está no quadro ---------- */
+function drawRev(){const v=$("vRev");
+  const G={conc:[],and:[],trav:[],nao:[]};
+  const grp=(id,c)=>{const d=D.dly[id];if(d&&d.st==="conc")return "conc";if(d&&d.st==="and")return "and";if(d&&d.st==="trav")return "trav";return "nao"};
+  const all=Object.entries(D.cards).filter(([,c])=>c&&c.s==="sim");
+  const nm=id=>(COLS.find(c=>c.id===id)||{}).n||id;
+  const per={};COLS.forEach(c=>per[c.id]={conc:[],and:[],trav:[],nao:[]});
+  all.forEach(([id,c])=>{const g=grp(id,c);G[g].push(c);(per[c.col]||(per[c.col]={conc:[],and:[],trav:[],nao:[]}))[g].push(c)});
+  const tot=all.length,pc=tot?Math.round(G.conc.length/tot*100):0;
+  const li=(c)=>'<li>'+esc(c.t)+(c.proj?' <small>· '+esc(c.proj)+'</small>':'')+'</li>';
+  const blk=(arr,k,t)=>arr.length?'<h4 class="h-'+k+'">'+t+' ('+arr.length+')</h4><ul>'+arr.map(li).join('')+'</ul>':'';
+  const ids=Object.keys(per).filter(k=>Object.values(per[k]).some(a=>a.length));
+  v.innerHTML='<header><div class="kick">Hub SENAI · revisão da sprint de 10 a 18/11</div><h1>Resultado da sprint</h1></header>'+
+   '<div class="rtot"><div class="k-conc"><b>'+G.conc.length+'</b><span>Concluídas ('+pc+'%)</span></div><div class="k-and"><b>'+G.and.length+'</b><span>Em andamento</span></div><div class="k-trav"><b>'+G.trav.length+'</b><span>Travadas</span></div><div class="k-nao"><b>'+G.nao.length+'</b><span>Não iniciadas</span></div><div><b>'+tot+'</b><span>Comprometidas</span></div></div>'+
+   '<div class="rgrid">'+ids.map(k=>{const p=per[k];const t=p.conc.length+p.and.length+p.trav.length+p.nao.length;const w=t?Math.round(p.conc.length/t*100):0;
+     return '<section class="rp"><h3>'+esc(nm(k))+'</h3><span class="bar"><i style="width:'+w+'%"></i></span><div><b>'+p.conc.length+'</b> de '+t+' concluídas</div>'+blk(p.conc,'conc','Concluídas')+blk(p.and,'and','Em andamento')+blk(p.trav,'trav','Travadas')+blk(p.nao,'nao','Não iniciadas')+'</section>'}).join('')+'</div>'+
+   '<div class="pauta"><b>Pauta da planning:</b> as '+(G.and.length+G.trav.length+G.nao.length)+' ações não concluídas abaixo. Para cada uma: por que não foi concluída, e ainda é prioridade? Se sim, entra na sprint de 23/11 a 02/12; se não, sai.</div>'+'<div class="rretro"><div><h3>O que deu certo</h3></div><div><h3>O que travou ou deu errado</h3></div><div><h3>O que muda na próxima sprint</h3></div></div>'}
 
 /* ---------- daily ---------- */
-let VIEW="daily";try{const v=location.hash.slice(1)||localStorage.getItem("quadro-view");if(v==="plan"||v==="daily"||v==="eu")VIEW=v}catch(e){}
+let VIEW="daily";try{const v=location.hash.slice(1)||localStorage.getItem("quadro-view");if(v==="plan"||v==="daily"||v==="eu"||v==="rev")VIEW=v}catch(e){}
 const HOJE=(()=>{const q=new URLSearchParams(location.search).get("dia");if(q&&/^\d\d\/\d\d$/.test(q))return q;return new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Maceio",day:"2-digit",month:"2-digit"}).format(new Date())})();
 const num=d=>d?(+d.slice(3,5))*100+(+d.slice(0,2)):0;
 const DIAHOJE=(DIAS.find(d=>d[0]===HOJE)||[HOJE,HOJE])[1];

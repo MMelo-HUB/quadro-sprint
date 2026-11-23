@@ -293,6 +293,13 @@ textarea#out{width:100%;min-height:160px;font:12px/1.4 ui-monospace,Consolas,mon
 .rp .h-conc{color:var(--ok)}.rp .h-and{color:var(--blue2)}.rp .h-trav{color:var(--warn)}.rp .h-nao{color:var(--no)}
 .pauta{border-left:5px solid var(--orange);background:var(--warnL);border-radius:8px;padding:10px 14px;font-size:15px}
 .carry{font-size:11px;border:1.5px solid var(--orange);background:var(--paper);color:var(--orange);border-radius:99px;padding:1px 8px;cursor:pointer;margin-left:6px}
+.bl .bln{margin:0;color:var(--muted);font-size:14px}
+.blr{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--paper)}
+.blr>div{display:flex;flex-direction:column;gap:2px;min-width:200px;flex:1}.blr small{color:var(--muted)}
+.blo{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.blo label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
+.blin{border:0;border-radius:8px;background:var(--ok);color:var(--paper);padding:6px 12px;cursor:pointer;font-weight:700}
+.blsum{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:14px}.blsum input{width:60px;font:inherit;padding:4px 6px}.blover{color:var(--no)}
+.bladd{display:flex;gap:6px;flex-wrap:wrap}.bladd input{flex:1;min-width:160px;font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:8px}.bladd button{border:0;border-radius:8px;background:var(--blue2);color:var(--paper);padding:0 14px;cursor:pointer}
 .rretro{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .rretro>div{border:2px dashed var(--line);border-radius:12px;padding:12px 14px;min-height:120px;display:flex;flex-direction:column;gap:6px}
 .rretro ul{margin:0;padding-left:16px;font-size:14px}.rretro small{color:var(--muted)}
@@ -522,6 +529,9 @@ const STEPS=[
    "Cada um responde: quais atividades precisam terminar antes de 02/12?",
    "A ação começa com verbo, e embaixo vai o cliente ou projeto",
    "Cada ação dura no máximo 2 dias; se for maior, quebrar em partes",
+   "Planejamento, execução e pós-execução são ações separadas",
+   "O texto diz o estado real: quem lê entende sem explicação",
+   "Sobrou folga? Registrar melhoria contínua ou capacitação",
    "Clicando no cartão: início, prazo e esforço",
    "Marcar entra, dúvida ou fora. Só entra o que termina dentro da sprint"]},
  {t:"Amarração",w:"Fechar as pontas",l:[
@@ -530,6 +540,8 @@ const STEPS=[
    "O que pede conversa longa vai para o Estacionamento"]},
  {t:"Compromisso",w:"O combinado",l:[
    "Ler em voz alta o que entra para cada um",
+   "Tudo que entrou deixa rastro na daily, ou uma justificativa de por que saiu",
+   "O que for feito fora do planejado também se registra",
    "Cada um copia a própria coluna e guarda",
    "Daily amanhã, 24/11, às 11h30: o que fiz, o que vou fazer, o que está travando",
    "Próxima revisão, retrospectiva e planning: qua 02/12"]}
@@ -666,6 +678,37 @@ function drawRev(){const v=$("vRev");
    '<div class="pauta"><b>Pauta da planning:</b> as '+(G.and.length+G.trav.length+G.nao.length)+' ações não concluídas abaixo. Para cada uma: por que não foi concluída, e ainda é prioridade? Se sim, entra na sprint de 23/11 a 02/12; se não, sai.</div>'+'<h2 class="rh">Retrospectiva</h2><div class="rretro">'+[["bom","O que deu certo"],["ruim","O que deu errado"],["muda","O que faremos diferente"]].map(([k,t])=>{const xs=Object.entries(D.retro||{}).filter(([,x])=>x&&x.k===k).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
      return '<div><h3>'+t+'</h3><ul>'+xs.map(([id,x])=>'<li>'+esc(x.t)+(x.por?' <small>· '+esc(x.por)+'</small>':'')+(readOnly?'':' <button class="rdel" data-rdel="'+id+'" aria-label="Remover">×</button>')+'</li>').join('')+'</ul>'+(readOnly?'':'<div class="radd"><input id="ri-'+k+'" data-rk="'+k+'" placeholder="Escreva e tecle Enter"><button data-radd="'+k+'">+</button></div>')+'</div>'}).join('')+'</div>'}
 
+/* ---------- backlog pessoal (Minha raia no dia da planning) ---------- */
+const SPN="23/11",PLANDIAS=["23/11","02/12"],PRI=[["1","Alta"],["2","Média"],["3","Baixa"]];
+let MODO_EU=null;
+function modoBacklog(){if(MODO_EU===null)MODO_EU=PLANDIAS.includes(HOJE)?"backlog":"daily";return MODO_EU==="backlog"}
+function drawBacklog(v){const me=MEU;const nmc=(COLS.find(c=>c.id===me)||{}).n||"";
+  const mine=Object.entries(D.cards).filter(([,c])=>c&&lanesOf(c).includes(me));
+  const velhas=mine.filter(([id,c])=>c.s==="sim"&&!c.sp&&!((D.dly[id]||{}).st==="conc")).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
+  const novas=mine.filter(([,c])=>c.sp===SPN).sort((a,b)=>((+a[1].pri||9)-(+b[1].pri||9))||((a[1].ts||0)-(b[1].ts||0)));
+  const hv=(D.hrs[me]&&D.hrs[me].v)||"";const soma=novas.reduce((t,[,c])=>t+(+c.esf||0),0);const sem=novas.filter(([,c])=>!c.esf).length;
+  const dlab=d=>{const s=(D.dly[d]||{}).st;return s==="and"?"em andamento":s==="trav"?"travada":"não iniciada"};
+  let h='<div class="mtop"><div><div class="kick">Planning · sprint de 23/11 a 02/12</div><h1 class="mh">'+esc(nmc)+' · meu backlog</h1></div><span><button class="ghost" data-modo="daily">Ver a daily</button> <button class="ghost" data-eu="">Trocar</button></span></div>';
+  h+='<section class="msec bl"><h2>Da sprint anterior, não concluídas<small>'+velhas.length+'</small></h2><p class="bln">Por que não foi concluída? Ainda é prioridade? Se sim, entra nesta sprint.</p>'+
+    (velhas.map(([id,c])=>'<div class="blr"><div><b>'+esc(c.t)+'</b>'+(c.proj?'<span class="proj">'+esc(c.proj)+'</span>':'')+'<small>'+dlab(id)+'</small></div><span><button class="blin" data-blin="'+id+'">Entra</button> <button class="ghost" data-blout="'+id+'">Sai</button></span></div>').join('')||'<span class="empty">Nada pendente.</span>')+'</section>';
+  h+='<section class="msec bl"><h2>Nesta sprint<small>'+novas.length+'</small></h2>'+
+    '<div class="blsum"><label>Horas livres até 02/12 <input id="blh" data-blh="1" inputmode="numeric" value="'+esc(hv)+'" placeholder="__"></label><span>Esforço somado: <b class="'+(hv&&soma>+hv?'blover':'')+'">'+soma+'h</b>'+(hv?' de '+esc(hv)+'h':'')+(sem?' · '+sem+' sem estimativa':'')+'</span></div>'+
+    (novas.map(([id,c])=>'<div class="blr"><div><b>'+esc(c.t)+'</b>'+(c.proj?'<span class="proj">'+esc(c.proj)+'</span>':'')+'</div><span class="blo"><label>Prioridade<select data-blf="pri" data-blk="'+id+'">'+opt(PRI,c.pri)+'</select></label><label>Esforço<select data-blf="esf" data-blk="'+id+'">'+opt(ESF,c.esf)+'</select></label><label>Prazo<select data-blf="fim" data-blk="'+id+'">'+opt(DIAS,c.fim)+'</select></label><button class="ghost" data-blout="'+id+'" title="Tirar da sprint">×</button></span></div>').join('')||'<span class="empty">Nenhuma ação ainda.</span>')+
+    '<div class="bladd"><input id="blt" placeholder="Nova ação (comece com um verbo)"><input id="blp" list="projs" placeholder="Cliente ou projeto"><button data-bladd="1">Acrescentar</button></div></section>';
+  v.innerHTML=h}
+function blAdd(){const t=($("blt")||{}).value||"";if(!t.trim()||readOnly||!MEU)return;const p=($("blp")||{}).value||"";$("blt").value="";$("blp").value="";
+  put("cards",MEU+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),{col:MEU,t:t.trim().replace(/\s+/g," "),proj:p.trim(),p:"",s:"sim",sp:SPN,ts:Date.now(),criado:new Date().toISOString()})}
+document.addEventListener("click",e=>{
+  const m=e.target.closest("[data-modo]");if(m){MODO_EU=m.dataset.modo;render();return}
+  if(readOnly)return;
+  const a=e.target.closest("[data-blin]");if(a){const c=D.cards[a.dataset.blin];if(c)put("cards",a.dataset.blin,{...c,sp:SPN,s:"sim"});return}
+  const o=e.target.closest("[data-blout]");if(o){const c=D.cards[o.dataset.blout];if(c)put("cards",o.dataset.blout,{...c,sp:"fora"});return}
+  if(e.target.closest("[data-bladd]"))blAdd()});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&(e.target.id==="blt"||e.target.id==="blp")){e.preventDefault();e.stopPropagation();blAdd()}},true);
+document.addEventListener("change",e=>{const t=e.target;if(!t||!t.dataset||readOnly)return;
+  if(t.dataset.blf){const c=D.cards[t.dataset.blk];if(c)put("cards",t.dataset.blk,{...c,[t.dataset.blf]:t.value});e.stopPropagation();return}
+  if(t.dataset.blh&&MEU){put("hrs",MEU,{v:t.value.trim()});e.stopPropagation()}},true);
+
 /* ---------- daily ---------- */
 let VIEW="daily";try{const v=location.hash.slice(1)||localStorage.getItem("quadro-view");if(v==="plan"||v==="daily"||v==="eu"||v==="rev")VIEW=v}catch(e){}
 const HOJE=(()=>{const q=new URLSearchParams(location.search).get("dia");if(q&&/^\d\d\/\d\d$/.test(q))return q;return new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Maceio",day:"2-digit",month:"2-digit"}).format(new Date())})();
@@ -794,12 +837,12 @@ function pullHtml(lid){let inner="";if(PULL===lid){const pl=pullList(lid);
   inner+=`<div class="addnew"><input id="pn-${lid}" data-pn="${lid}" placeholder="Nova tarefa fora da planning" aria-label="Nova tarefa fora da planning"><button data-pnew="${lid}" aria-label="Adicionar tarefa fora da planning">+</button></div>`;
   return inner}
 let MEU=null;try{MEU=localStorage.getItem("quadro-eu")}catch(e){}
-function drawMine(){const v=$("vEu");
+function drawMine(){const v=$("vEu");if(MEU&&COLS.find(c=>c.id===MEU)&&modoBacklog()){drawBacklog(v);return}
   if(!MEU||!COLS.find(c=>c.id===MEU)){v.innerHTML=COLS.length?`<h1 class="mh">Quem é você?</h1><div class="gp">${COLS.map(c=>`<button data-eu="${c.id}">${esc(c.n)}</button>`).join("")}</div>`:`<p class="empty">Carregando…</p>`;return}
   const by={prev:[],and:[],trav:[],conc:[],antes:[]};
   Object.entries(D.cards).filter(([,c])=>c&&c.s==="sim"&&lanesOf(c).includes(MEU)).forEach(([id,c])=>{const col=colOf(id,c);if(col)by[col].push([id,c])});
   const s=dstate();const ord=ordemFala();
-  let h=`<div class="mtop"><div><div class="kick">Daily · ${DIAHOJE}</div><h1 class="mh">${esc(nmOf(MEU))}</h1></div><button class="ghost" data-eu="">Trocar</button></div>`;
+  let h=`<div class="mtop"><div><div class="kick">Daily · ${DIAHOJE}</div><h1 class="mh">${esc(nmOf(MEU))}</h1></div><button class="ghost" data-modo="backlog">Meu backlog</button> <button class="ghost" data-eu="">Trocar</button></div>`;
   if(D.daily&&D.daily.data===HOJE)h+=`<div class="mvez">Vez de <b>${esc(nmOf(ord[s.vez]))}</b> · ${esc(QS[s.q].q)}</div>`;
   h+=KCOLS.map(([k,l])=>`<section class="msec" data-cell="${k}" data-lane="${MEU}"><h2>${l}<small>${by[k].length}</small></h2>${cellSort(by[k]).map(([id,c])=>dcard(id,c,k,MEU)).join("")||`<span class="empty">Nada aqui.</span>`}${k==="conc"&&by.antes.length?`<span class="more">+${by.antes.length} concluída${by.antes.length>1?"s":""} antes de hoje</span>`:""}${k==="prev"&&!readOnly?pullHtml(MEU):""}</section>`).join("");
   v.innerHTML=h}

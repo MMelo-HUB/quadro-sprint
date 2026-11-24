@@ -682,7 +682,7 @@ function drawRev(){const v=$("vRev");if(typeof ADMIN!=="undefined"&&!ADMIN){v.in
      return '<div><h3>'+t+'</h3><ul>'+xs.map(([id,x])=>'<li>'+esc(x.t)+(x.por?' <small>· '+esc(x.por)+'</small>':'')+(readOnly?'':' <button class="rdel" data-rdel="'+id+'" aria-label="Remover">×</button>')+'</li>').join('')+'</ul>'+(readOnly?'':'<div class="radd"><input id="ri-'+k+'" data-rk="'+k+'" placeholder="Escreva e tecle Enter"><button data-radd="'+k+'">+</button></div>')+'</div>'}).join('')+'</div>'}
 
 /* ---------- backlog pessoal (Minha raia no dia da planning) ---------- */
-const SPN="23/11",PLANDIAS=["23/11","02/12"],PRI=[["1","Alta"],["2","Média"],["3","Baixa"]];
+const SPN="23/11",SPINI="2026-11-23",PLANDIAS=["23/11","02/12"],PRI=[["1","Alta"],["2","Média"],["3","Baixa"]];
 let MODO_EU=null;
 function modoBacklog(){if(MODO_EU===null)MODO_EU=PLANDIAS.includes(HOJE)?"backlog":"daily";return MODO_EU==="backlog"}
 function drawBacklog(v){const me=MEU;const nmc=(COLS.find(c=>c.id===me)||{}).n||"";
@@ -762,7 +762,9 @@ function dstate(){const d=D.daily||{};if(d.data!==HOJE)return {data:HOJE,ordem:s
   const ids=COLS.map(c=>c.id);let o=(d.ordem||[]).filter(x=>ids.includes(x));ids.forEach(x=>{if(!o.includes(x))o.push(x)});return {...d,ordem:o,aus:d.aus||[],vez:d.vez||0,q:d.q||0}}
 function ordemFala(){const s=dstate();return [...s.ordem.filter(x=>!s.aus.includes(x)),...s.ordem.filter(x=>s.aus.includes(x))]}
 function setDaily(p){if(readOnly)return;put("daily",null,{...dstate(),...p,data:HOJE})}
-function colOf(id,c){if(!c||c.s!=="sim")return null;const d=D.dly[id];
+/* a daily só mostra o que é da sprint atual: o que entrou na planning (sp) ou nasceu na própria daily desde o início dela */
+function naSprint(c){return !!c&&(c.sp===SPN||(!c.sp&&c.origem==="daily"&&String(c.criado||"")>=SPINI))}
+function colOf(id,c){if(!c||c.s!=="sim"||!naSprint(c))return null;const d=D.dly[id];
   if(d){if(d.st==="and")return "and";if(d.st==="trav")return "trav";if(d.st==="conc")return d.dia===HOJE?"conc":"antes";if(d.st==="hoje")return "prev";if(d.st==="nh"&&d.dia===HOJE)return null}
   return c.ini&&num(c.ini)<=num(HOJE)?"prev":null}
 function lateOf(id,c){const d=D.dly[id];if(d&&d.st==="hoje")return d.dia&&num(d.dia)<num(HOJE);return c.ini&&num(c.ini)<num(HOJE)}
@@ -804,12 +806,12 @@ function cal(id,c){const fut=DIAS.filter(d=>num(d[0])>num(HOJE));
 function remarcar(id,day){const c=D.cards[id];if(!c||readOnly)return;const n={...c,ini:day,hist:[...(c.hist||[]),{de:c.ini||"",para:day,em:HOJE}]};
   if(day&&n.fim&&num(n.fim)<num(day))n.fim=day;RESCH=null;logMov(id,colOf(id,c)||"fora","resch",{novo:day||""});put("cards",id,n);if(D.dly[id])del("dly",id);
   toast(day?"Remarcada para "+((DIAS.find(d=>d[0]===day)||[,day])[1]):"Voltou para a planning, sem data")}
-function pullList(lane){return Object.entries(D.cards).filter(([id,c])=>c&&lanesOf(c).includes(lane)&&c.s==="sim"&&!colOf(id,c)&&(D.dly[id]||{}).st!=="conc").sort((a,b)=>num(a[1].ini||"31/12")-num(b[1].ini||"31/12")||(a[1].ts||0)-(b[1].ts||0))}
+function pullList(lane){return Object.entries(D.cards).filter(([id,c])=>c&&naSprint(c)&&lanesOf(c).includes(lane)&&c.s==="sim"&&!colOf(id,c)&&(D.dly[id]||{}).st!=="conc").sort((a,b)=>num(a[1].ini||"31/12")-num(b[1].ini||"31/12")||(a[1].ts||0)-(b[1].ts||0))}
 function drawDaily(){
   const s=dstate();const ord=ordemFala();const vezId=ord[Math.min(s.vez,ord.length-1)];const pres=ord.filter(x=>!s.aus.includes(x));
   const di=DIAS.findIndex(d=>d[0]===HOJE);
   $("dTitle").textContent="Daily · "+DIAHOJE;
-  const all=Object.entries(D.cards).filter(([,c])=>c&&c.s==="sim");const feitos=all.filter(([id])=>(D.dly[id]||{}).st==="conc").length;
+  const all=Object.entries(D.cards).filter(([,c])=>c&&c.s==="sim"&&naSprint(c));const feitos=all.filter(([id])=>(D.dly[id]||{}).st==="conc").length;
   const pct=all.length?Math.round(feitos/all.length*100):0;
   $("dProg").innerHTML=`<span>${di>=0?`Dia <b>${di+1}</b> de ${DIAS.length} da sprint · `:""}<b>${feitos}</b> de ${all.length} ações concluídas</span><span class="bar"><i style="width:${pct}%"></i></span><label class="sortsel">Ordem nas colunas <select id="dSort" data-dsort="1">${[["prazo","Prazo"],["proj","Projeto"],["manual","Personalizada (arrastar)"]].map(([k,l])=>`<option value="${k}"${SORT===k?" selected":""}>${l}</option>`).join("")}</select></label>`;
   const nm=id=>(COLS.find(c=>c.id===id)||{}).n||id;
@@ -863,7 +865,7 @@ function drawMine(){const v=$("vEu");if(MEU&&COLS.find(c=>c.id===MEU)&&modoBackl
 function nextQ(dir){const s=dstate();const ord=ordemFala();const n=ord.filter(x=>!s.aus.includes(x)).length||1;let {vez,q}=s;
   if(dir>0){if(q<2)q++;else if(vez<n-1){vez++;q=0}}else{if(q>0)q--;else if(vez>0){vez--;q=2}}
   setDaily({vez,q})}
-function newCard(lane,t,extra){const id=lane+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);put("cards",id,{col:lane,t,p:"",s:"sim",ts:Date.now(),criado:new Date().toISOString(),ini:HOJE,origem:"daily",...extra});logMov(id,"",extra&&extra.pai?"destrave":"novo");return id}
+function newCard(lane,t,extra){const id=lane+"-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);put("cards",id,{col:lane,t,p:"",s:"sim",sp:SPN,ts:Date.now(),criado:new Date().toISOString(),ini:HOJE,origem:"daily",...extra});logMov(id,"",extra&&extra.pai?"destrave":"novo");return id}
 function addKid(pid){const t=$("kt-"+pid).value.trim();if(!t)return;const w=$("kw-"+pid).value;const p=D.cards[pid]||{};$("kt-"+pid).value="";newCard(w,t,{pai:pid,proj:p.proj||""});toast("Tarefa criada na raia de "+((COLS.find(c=>c.id===w)||{}).n||""))}
 function addNow(lane){const i=$("pn-"+lane);const t=i.value.trim();if(!t)return;i.value="";newCard(lane,t,{})}
 document.addEventListener("click",e=>{

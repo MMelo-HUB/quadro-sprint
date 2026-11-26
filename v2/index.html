@@ -1306,7 +1306,7 @@ function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";
    '<label class="f">Resultado esperado<input id="naR" placeholder="Relatório enviado ao cliente para validação"></label>'+
    '<label class="f">Frente<select id="naFr" data-etpde="naEt">'+frenteOpts(fr)+'</select></label>'+
    '<label class="f" id="naEtL"'+(etpsDe(fr).length?'':' hidden')+'>Etapa do projeto<select id="naEt">'+etpOpts(fr,o.etp||"")+'</select></label>'+
-   '<div class="row"><label class="f">Fase<select id="naF">'+opts(Object.entries(FASES),"exec")+'</select></label><label class="f">Esforço<select id="naE">'+opts(ESFS,2)+'</select></label></div>'+
+   '<div class="row"><label class="f">Fase<select id="naF">'+opts(Object.entries(FASES),"exec")+'</select></label><label class="f">Esforço<select id="naE">'+opts([["","— a definir"],...ESFS],"")+'</select></label></div>'+
    '<div class="row"><label class="f">Prioridade<select id="naPr">'+opts([[1,"Alta"],[2,"Normal"],[3,"Baixa"]],2)+'</select></label><label class="f">Responsável<select id="naD">'+pessoasOpt(p)+'</select></label></div>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Junto com</div>'+todosChk("data-nacom",[],null)+
    (o.dest==="back"?'':'<div class="row"><label class="f">Ligada a outra ação<select id="naVt">'+opts([["","Não"],["acomp","Acompanha a ação…"],["dep","Depende da ação…"]],"")+'</select></label><label class="f">Qual ação<select id="naVc">'+vincOpts("")+'</select></label></div>')+
@@ -1432,7 +1432,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   L.push(b("pessoas","Passar pra outra pessoa ou fazer junto"),b("editar","Editar ação, resultado, projeto, fase, prazo…"));
   L.push(b("apagar","Tirar da sprint","no"));
   const P=c.pj&&S.projetos[c.pj];const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];
-  const det=[["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":""],["Prioridade",{1:"Alta",3:"Baixa"}[c.pri]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+  const det=[["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",{1:"Alta",3:"Baixa"}[c.pri]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1]);
   if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
@@ -1469,7 +1469,7 @@ function gEditar(id){const c=S.cards[id];const pjs=Object.entries(S.projetos).fi
    '<div class="row"><label class="f">Fase<select id="edFa"><option value="">—</option>'+opts(Object.entries(FASES),c.fase||"")+'</select></label>'+
    '<label class="f">Ligada a outra ação<select id="edVt">'+opts([["","Não"],["acomp","Acompanha a ação…"],["dep","Depende da ação…"]],c.dep?"dep":c.acomp?"acomp":"")+'</select></label></div>'+
    '<label class="f">Qual ação<select id="edVc">'+vincOpts(c.dep||c.acomp||"",id)+'</select></label>'+
-   '<div class="row"><label class="f">Esforço<select id="edE">'+opts([["",""],[1,"1h · ¼ turno"],[2,"2h · ½ turno"],[4,"4h · 1 turno"],[8,"8h · 1 dia"],[16,"16h · 2 dias"]],c.esf)+'</select></label>'+
+   '<div class="row"><label class="f">Esforço<select id="edE">'+opts([["","— a definir"],...ESFS],c.esf||"")+'</select></label>'+
    '<label class="f">Prioridade<select id="edPr">'+opts([[1,"Alta"],[2,"Normal"],[3,"Baixa"]],c.pri||2)+'</select></label></div>'+
    '<div class="row"><label class="f">Início previsto<input id="edI" type="date" value="'+esc(c.ini||"")+'"></label><label class="f">Prazo<input id="edF" type="date" value="'+esc(c.fim||"")+'"></label></div>'+
    '<div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="editok" data-id="'+id+'">Salvar</button></div>')}
@@ -1550,7 +1550,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     if(dest==="sprint"&&!sp){$("naErr").textContent="Não há sprint cadastrada.";return}
     const dono=$("naD").value;const now=Date.now();const com=[...document.querySelectorAll("[data-nacom]:checked")].map(x=>x.value).filter(x=>x!==dono);
     const vt=$("naVt")?$("naVt").value:"",vc=$("naVc")?$("naVc").value:"";if(vt&&!vc){$("naErr").textContent="Escolha a ação ligada.";return}
-    const nc={t,res:$("naR").value.trim()||null,...lerFrente($("naFr").value),etp:$("naEt").value||null,fase:$("naF").value,esf:+$("naE").value,pri:+$("naPr").value,dono,com,
+    const nc={t,res:$("naR").value.trim()||null,...lerFrente($("naFr").value),etp:$("naEt").value||null,fase:$("naF").value,esf:$("naE").value?+$("naE").value:null,pri:+$("naPr").value,dono,com,
       estado:"prev",sprint:dest==="sprint"?S.cfg.sprint:null,plan:dest==="sprint"?!sp.fechado:true,blocos:[],criado:now,criadoPor:QUEM,atualizado:now};
     if(vt==="dep")nc.dep=vc;if(vt==="acomp")nc.acomp=vc;
     const nid2=dono+"-"+nid();DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");

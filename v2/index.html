@@ -67,7 +67,7 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeL)}
 .lnk.bkt{text-align:left;font:inherit;color:var(--ink);padding:0;display:block}.lnk.bkt:hover{color:var(--blue);text-decoration:underline}
 .bki{display:flex;align-items:center;gap:.5em}.bki .bkc{flex:1;min-width:0}.bki .bt{margin-left:auto}
-.bkid{font-size:.72em;font-weight:800;color:var(--blue2);background:var(--bg);border-radius:6px;padding:.15em .4em;white-space:nowrap}.bkid.big{font-size:.6em;vertical-align:middle}
+.bkn{font-weight:700;color:var(--muted);font-size:.88em;min-width:2.2em;font-variant-numeric:tabular-nums}.bkn.big{font-size:.8em;min-width:0;margin-right:.2em}
 .alca{cursor:grab;color:var(--muted);font-size:.8em;letter-spacing:-2px;user-select:none}.bki.arr{cursor:grab}.bki.arrastando{opacity:.4}
 .bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -1188,8 +1188,9 @@ const doPj=pj=>Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===pj);
 const maxNum=pj=>Object.values(S.cards).filter(c=>c&&c.pj===pj).reduce((m,c)=>Math.max(m,+c.num||0),0);
 const chaveEt=(P,c)=>(P.etapas||[]).includes(c.etp)?c.etp:"__sem";
 function numerarPj(pj){const sem=doPj(pj).filter(([,c])=>!c.num).sort((a,b)=>(a[1].criado||0)-(b[1].criado||0));let n=maxNum(pj);sem.forEach(([cid,c])=>{if(ADMIN||podeMexer(c)){n++;c.num=n;DB.set("cards",cid,{num:n})}})}
+function posBk(pj,cid){const P=S.projetos[pj]||{};const c=S.cards[cid];if(!c)return "";const k=chaveEt(P,c);const L=doPj(pj).filter(([,x])=>chaveEt(P,x)===k).sort((a,b)=>ordDe(a[1])-ordDe(b[1]));const i=L.findIndex(([x])=>x===cid);const e=(P.etapas||[]).indexOf(c.etp);return (e>=0?(e+1)+".":"")+(i+1)}
 function gBkMover(cid,alvo,pos,pj){const c=S.cards[cid],a=S.cards[alvo];if(!c||!a)return;
-  abrir('<h2>Mudar a ordem?</h2><p>Mover <b>#'+(c.num||"?")+' · '+esc(c.t)+'</b></p><p>para '+(pos==="antes"?"antes":"depois")+' de <b>#'+(a.num||"?")+' · '+esc(a.t)+'</b>?</p>'+
+  abrir('<h2>Mudar a ordem?</h2><p>Mover <b>'+posBk(pj,cid)+' · '+esc(c.t)+'</b></p><p>para '+(pos==="antes"?"antes":"depois")+' de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>?</p>'+
    '<div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri" data-a="bkmvok" data-id="'+cid+'" data-alvo="'+alvo+'" data-pos="'+pos+'" data-bk="'+pj+'">Mover</button></div>')}
 function gBacklog(id){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
   const todas=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===id);
@@ -1198,13 +1199,13 @@ function gBacklog(id){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.d
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n).sort(pOrd),i]);
   const outros=todas.filter(([,c])=>!ets.includes(c.etp)).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c])=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkid">#'+(c.num||"–")+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+  const li=([cid,c],pi,et)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+(et>=0?(et+1)+".":"")+(pi+1)+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
     
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
    (todas.length||ets.length?grupos.map(([n,cs,i])=>{const feitas=cs.filter(([,c])=>c.estado==="conc").length;const atual=i===(P.etapa||0);
      return '<details class="eap'+(atual?' atual':'')+'"'+(atual||!n||cs.some(([,c])=>c.sprint===S.cfg.sprint)?' open':'')+'><summary>'+(n?'<b>'+esc(n)+(atual?' <em>etapa atual</em>':'')+'</b>':'<b></b>')+'<span class="eapn">'+feitas+'/'+cs.length+'</span><span class="eapb"><i style="width:'+(cs.length?Math.round(100*feitas/cs.length):0)+'%"></i></span></summary>'+
-       (cs.length?'<div class="lst">'+cs.map(li).join("")+'</div>':'<p class="ct">Nenhuma ação ainda.</p>')+
+       (cs.length?'<div class="lst">'+cs.map((x,pi)=>li(x,pi,i)).join("")+'</div>':'<p class="ct">Nenhuma ação ainda.</p>')+
        (pode&&i>=0?'<button class="btn sm" style="margin-top:.4em" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-etp="'+esc(n)+'" data-dest="back">+ ação nesta etapa</button>':'')+'</details>'}).join(""):'<p class="ct">Nada no backlog.</p>')+
    '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>')}
 
@@ -1467,7 +1468,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
 function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
 function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
-  abrir('<h2>'+(c.num?'<span class="bkid big">#'+c.num+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
+  abrir('<h2>'+(pj&&posBk(pj,cid)?'<span class="bkn big">'+posBk(pj,cid)+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+
    '<div class="bts"><button class="btn esq" data-a="bkvolta" data-bk="'+pj+'">← Backlog</button>'+(pode?'<button class="btn pri" data-a="editar" data-id="'+cid+'" data-bk="'+pj+'">Editar</button>':'')+'</div>')}
 function gTravar(id){const c=S.cards[id];

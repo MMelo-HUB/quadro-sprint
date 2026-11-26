@@ -1079,7 +1079,7 @@ function ganttHtml(rows,marcosP,pv,tit){
   const span=(meioDia(fim)-meioDia(ini))/86400000;
   // escala: semanas (até ~4 meses), meses (até ~14 meses) ou trimestres
   const modo=span<=120?"sem":span<=430?"mes":"tri";
-  if(modo==="sem"){ini=addDias(ini,-((dow(ini)+6)%7));fim=addDias(fim,7)}else{ini=ini.slice(0,8)+"01";const d=new Date(fim.slice(0,7)+"-15T12:00:00");d.setMonth(d.getMonth()+1);fim=d.toISOString().slice(0,8)+"01"}
+  /* folga no fim, parecida com a do começo, pra linha do término não encostar na borda */const folga=Math.max(modo==="sem"?10:30,Math.round(span*.05));fim=addDias(fim,folga);if(modo==="sem"){ini=addDias(ini,-((dow(ini)+6)%7));fim=addDias(fim,7)}else{ini=ini.slice(0,8)+"01";const d=new Date(fim.slice(0,7)+"-15T12:00:00");d.setMonth(d.getMonth()+1);fim=d.toISOString().slice(0,8)+"01"}
   const t0=meioDia(ini).getTime(),t1=meioDia(fim).getTime();const x=d=>Math.max(0,Math.min(100,(meioDia(d).getTime()-t0)/(t1-t0)*100));
   const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
   const ticks=[];if(modo==="sem"){for(let d=ini;d<fim;d=addDias(d,7))ticks.push([d,dm(d),false])}

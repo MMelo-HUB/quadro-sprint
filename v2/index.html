@@ -1253,7 +1253,7 @@ function gBacklog(id,abreEt){numerarPj(id);const P=S.projetos[id];const pode=ADM
      return '<details class="eap'+(atual?' atual':'')+'"'+(atual||!n||n===abreEt||cs.some(([,c])=>c.sprint===S.cfg.sprint)?' open':'')+'><summary>'+(n?'<b>'+esc(n)+(atual?' <em>etapa atual</em>':'')+'</b>':'<b></b>')+'<span class="eapn">'+feitas+'/'+cs.length+'</span><span class="eapb"><i style="width:'+(cs.length?Math.round(100*feitas/cs.length):0)+'%"></i></span></summary>'+
        (cs.length?'<div class="lst">'+arvore(cs,i>=0?(i+1)+".":"").map(([x,cod,nv])=>li(x,cod,nv,n)).join("")+'</div>':'<p class="ct">Nenhuma ação ainda.</p>')+
        (pode&&i>=0?'<button class="btn sm" style="margin-top:.4em" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-etp="'+esc(n)+'" data-dest="back">+ ação nesta etapa</button>':'')+'</details>'}).join(""):'<p class="ct">Nada no backlog.</p>')+
-   '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>')}
+   '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>','larga')}
 
 /* arrastar no backlog: solta antes/depois de outra ação da mesma etapa e pede confirmação */
 (()=>{let DRG=null;const limpa=()=>document.querySelectorAll(".bki.antes,.bki.depois,.bki.dentro").forEach(x=>x.classList.remove("antes","depois","dentro"));

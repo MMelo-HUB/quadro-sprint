@@ -1177,7 +1177,7 @@ function lista(k,itens,vazio,botao){const L=LST[k];return '<div class="lh lh-'+k
 const sec=(tit,dica,corpo)=>'<section class="fsec"><h3>'+tit+'</h3>'+(dica?'<p class="ct">'+dica+'</p>':'')+corpo+'</section>';
 function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas:[],marcos:[],etapa:0};const ed=!!id;
   const basico='<div class="fgrid"><label class="f fnome"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'" oninput="var g=document.getElementById(\'pjSg\');if(g&&!g.dataset.mexeu)g.value=siglaAuto(this.value)"></label>'+
-   '<label class="f" title="Aparece no código das ações, ex.: CENTELHA-FWQV">Sigla (código das ações)<input id="pjSg" maxlength="12" value="'+esc(P.sigla||(P.nome?siglaAuto(P.nome):""))+'" placeholder="Ex.: CENTELHA" oninput="this.dataset.mexeu=1" style="text-transform:uppercase"></label>'+
+   '<label class="f" title="Aparece no código das ações, ex.: CENTELHA-FWQV">Sigla (código das ações)<input id="pjSg" maxlength="12" value="'+esc(P.sigla||(P.nome?siglaAuto(P.nome):""))+'" oninput="this.dataset.mexeu=1" style="text-transform:uppercase"></label>'+
    '<label class="f">Tipo<select id="pjT">'+opts([["projeto","Projeto (tem fim)"],["servico","Serviço (contínuo)"]],P.tipo)+'</select></label>'+
    '<label class="f">Responsável<select id="pjD"><option value="">—</option>'+pessoasOpt(P.dono)+'</select></label>'+
    '<label class="f">Contratante ou parceiro<input id="pjC" value="'+esc(P.cliente||"")+'" placeholder="Sebrae, Caixa…"></label></div>';

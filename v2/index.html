@@ -64,6 +64,7 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 .gleg{display:flex;gap:1.2em;flex-wrap:wrap;font-size:.74em;color:var(--muted);margin:.1em 0 .6em}.gleg span{display:flex;align-items:center;gap:.4em}.gleg i{display:inline-block;width:14px;height:0;border-top:2px solid}
 .gleg .lh{border-color:#c99700}.gleg .lp{border-top:2px dashed var(--blue)}.gleg .lm{width:10px;height:10px;border:0;background:var(--no);border-radius:2px}
 @media(max-width:640px){.gr{grid-template-columns:7em minmax(0,1fr)}.gd{display:none}}
+.avt{display:block;min-height:0;font-size:.95em;font-weight:600;text-transform:none;letter-spacing:0;color:var(--no)}.avt:empty{display:none}textarea.alerta{border-color:var(--no)!important}.btn:disabled{opacity:.45;cursor:not-allowed}
 select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeL)}
 .lnk.bkt{text-align:left;font:inherit;color:var(--ink);padding:0;display:block}.lnk.bkt:hover{color:var(--blue);text-decoration:underline}
 .bki{display:flex;align-items:center;gap:.5em}.bki .bkc{flex:1;min-width:0}.bki .bt{margin-left:auto}
@@ -764,6 +765,14 @@ function lerStatus(c,st,ini){const p={};const de=c?c.estado:null;if(st==="afazer
   if(p.estado==="conc"&&de!=="conc")p.concEm=Date.now();else if(p.estado!=="conc"&&de==="conc")p.concEm=null;
   if(p.estado!=="trav"&&de==="trav")p.trava=null;
   return {p}}
+/* texto da ação: primeira letra maiúscula e começa com verbo no infinitivo */
+const NAOVERBO=new Set("por para pelo pela mentor mentora valor setor lugar melhor maior menor senhor doutor professor diretor gestor coordenador facilitador avaliador exterior interior anterior posterior superior inferior favor amor cor dor flor mar bar par ar computador indicador fornecedor parceiro".split(" "));
+const capIni=t=>{t=String(t||"");const i=t.search(/\S/);return i<0?t:t.slice(0,i)+t.charAt(i).toLocaleUpperCase("pt-BR")+t.slice(i+1)};
+function verboOk(t){const w=String(t||"").trim().split(/\s+/)[0]||"";const b=w.toLowerCase().replace(/[.,;:!?]+$/,"").replace(/-(se|lo|la|los|las|me|te|nos)$/,"");if(!b)return false;if(NAOVERBO.has(b))return false;return /^[a-zà-ü]+(ar|er|ir|or|ôr)$/.test(b)}
+/* liga o aviso e o botão Salvar ao campo */
+function checaAcao(el){if(!el)return true;const bt=document.querySelector(el.id==="naT"?'[data-a="acaook"]':'[data-a="editok"]');const av=$(el.id+"Av");const v=el.value.trim();
+  const ok=!!v&&verboOk(v);if(av)av.textContent=!v?"":ok?"":"Comece com um verbo no infinitivo (ex.: Elaborar, Enviar, Conduzir, Realizar).";if(bt)bt.disabled=!ok;el.classList.toggle("alerta",!!v&&!ok);return ok}
+document.addEventListener("input",e=>{const t=e.target;if(!t||(t.id!=="naT"&&t.id!=="edT"))return;const c=capIni(t.value);if(c!==t.value){const p=t.selectionStart;t.value=c;try{t.setSelectionRange(p,p)}catch(x){}}checaAcao(t)});
 let NOVO_PAI="";let VOLTA=null,EDPJ="",ULT_ET="";
 const PRIS=[[1,"Urgente"],[2,"Importante"],[3,"Média"],[4,"Normal"]];const priDe=c=>c&&c.pv===2?(+c.pri||4):({1:2}[c&&c.pri]||4);
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];
@@ -1373,7 +1382,7 @@ function gBol(id){const b=id?S.pessoasX[id]:{hsem:20};
 /* ================= gavetas novas ================= */
 function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";const pai=NOVO_PAI&&S.cards[NOVO_PAI];
   abrir('<h2>'+(pai?"Nova subação":o.dest==="back"?"Nova ação no backlog":"Nova ação na sprint")+'</h2>'+(pai?'<p class="ct">Dentro de <b>'+esc(posBk(pai.pj,NOVO_PAI))+' · '+esc(pai.t)+'</b></p>':'')+
-   '<label class="f"><span>Ação<span class="req">*</span></span><textarea id="naT" rows="2" placeholder="Elaborar o relatório de diagnóstico"></textarea></label>'+
+   '<label class="f"><span>Ação<span class="req">*</span></span><textarea id="naT" rows="2" placeholder="Elaborar o relatório de diagnóstico"></textarea><span class="avt" id="naTAv"></span></label>'+
    '<label class="f">Resultado esperado<input id="naR" placeholder="Relatório enviado ao cliente para validação"></label>'+
    '<label class="f">Frente<select id="naFr" data-etpde="naEt">'+frenteOpts(fr)+'</select></label>'+
    '<label class="f" id="naEtL"'+(etpsDe(fr).length?'':' hidden')+'>Etapa do projeto<select id="naEt">'+etpOpts(fr,o.etp||"")+'</select></label>'+
@@ -1382,7 +1391,7 @@ function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";const 
    (o.dest==="back"?'<div class="row"><label class="f">Status<select id="naSt">'+opts(STATS,"afazer")+'</select></label><label class="f">Início previsto<input id="naI" type="date"></label></div>':'')+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Junto com</div>'+todosChk("data-nacom",[],null)+
    (o.dest==="back"?'':'<div class="row"><label class="f">Ligada a outra ação<select id="naVt">'+opts([["","Não"],["acomp","Acompanha a ação…"],["dep","Depende da ação…"]],"")+'</select></label><label class="f">Qual ação<select id="naVc">'+vincOpts("")+'</select></label></div>')+
-   '<p class="ct" id="naErr" style="color:var(--no)"></p><div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="acaook" data-dest="'+(o.dest||"sprint")+'">Salvar</button></div>')}
+   '<p class="ct" id="naErr" style="color:var(--no)"></p><div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="acaook" data-dest="'+(o.dest||"sprint")+'" disabled>Salvar</button></div>');setTimeout(()=>{const t=$("naT");if(t)t.focus()},50)}
 function gComp(p){const dias=diasSp();
   abrir('<h2>'+(p==="equipe"?"Compromisso da equipe":"Compromisso fixo")+'</h2>'+
    '<label class="f"><span>O que é<span class="req">*</span></span><input id="cpT" placeholder="Visita técnica ao cliente"></label>'+
@@ -1537,7 +1546,7 @@ function gPessoas(id){const c=S.cards[id];
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Junto com</div>'+todosChk("data-com",c.com||[],null)+
    '<div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="pessoasok" data-id="'+id+'">Salvar</button></div>')}
 function gEditar(id){const c=S.cards[id];const pjs=Object.entries(S.projetos).filter(([,x])=>x&&x.ativo!==false).sort((a,b)=>a[1].nome.localeCompare(b[1].nome,"pt"));
-  abrir('<h2>Editar</h2><label class="f"><span>Ação<span class="req">*</span></span><textarea id="edT" rows="2">'+esc(c.t)+'</textarea></label>'+
+  abrir('<h2>Editar</h2><label class="f"><span>Ação<span class="req">*</span></span><textarea id="edT" rows="2">'+esc(c.t)+'</textarea><span class="avt" id="edTAv"></span></label>'+
    '<label class="f">Resultado esperado<input id="edR" value="'+esc(c.res||"")+'"></label>'+
    '<label class="f">Situação atual<input id="edS" value="'+esc(c.sit||"")+'" placeholder="Em que ponto está"></label>'+
    '<label class="f">Frente'+(c.proj&&!c.pj&&!catDe(c)?' (hoje: "'+esc(c.proj)+'", sem cadastro)':'')+'<select id="edFr" data-etpde="edEt">'+frenteOpts(frenteDe(c))+'</select></label>'+
@@ -1552,7 +1561,7 @@ function gEditar(id){const c=S.cards[id];const pjs=Object.entries(S.projetos).fi
      return '<label class="f">Faz parte de<select id="edPai">'+opts([["","— nenhuma (é uma ação principal)"],...ops],c.pai||"")+'</select></label>'})():'')+
    '<div class="row"><label class="f">Status<select id="edSt">'+opts(STATS,statusDe(c))+'</select></label><label class="f">Início previsto<input id="edI" type="date" value="'+esc(c.ini||"")+'"></label></div>'+
    '<div class="row"><label class="f">Prazo<input id="edF" type="date" value="'+esc(c.fim||"")+'"></label><span></span></div><p class="ct" id="edErr" style="color:var(--no)"></p>'+
-   '<div class="bts"><button class="btn esq no" data-a="bkdel" data-id="'+id+'" data-bk="'+esc(EDPJ)+'">Excluir</button><button class="btn" data-a="edcanc">Cancelar</button><button class="btn pri" data-a="editok" data-id="'+id+'">Salvar</button></div>')}
+   '<div class="bts"><button class="btn esq no" data-a="bkdel" data-id="'+id+'" data-bk="'+esc(EDPJ)+'">Excluir</button><button class="btn" data-a="edcanc">Cancelar</button><button class="btn pri" data-a="editok" data-id="'+id+'">Salvar</button></div>');checaAcao($("edT"))}
 /* raia de grupo ("g:id1,id2"): a pessoa vem do seletor ao lado do campo */
 function alvo(el,pv){if(!String(pv).startsWith("g:"))return pv;const s=el.closest(".foot")&&el.closest(".foot").querySelector("[data-quem]");return s?s.value:pv.slice(2).split(",")[0]}
 function gPuxar(p){const R=String(p).startsWith("g:")?raiaN(p.slice(2).split(",")):raia(p);
@@ -1629,7 +1638,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     else{const ix=sib.findIndex(([x])=>x===b.dataset.alvo);const ante=pos==="antes"?sib[ix-1]:sib[ix],depo=pos==="antes"?sib[ix]:sib[ix+1];o=ante&&depo?(ordDe(ante[1])+ordDe(depo[1]))/2:ante?ordDe(ante[1])+1:depo?ordDe(depo[1])-1:0}
     const mud={ord:o,pai:novoPai,atualizado:Date.now()};if(c.etp!==alvo.etp)mud.etp=alvo.etp||null;DB.set("cards",id,mud);toast(pos==="dentro"?"Agora é uma subação":"Ordem atualizada");gBacklog(pj);return}
   case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
-  case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const _st=lerStatus(c,$("edSt").value,ini);if(_st.erro){$("edErr").textContent=_st.erro;$("edI").focus();return}if("ini" in _st.p)ini=_st.p.ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
+  case "editok":{if($("edT")){$("edT").value=capIni($("edT").value);if(!checaAcao($("edT")))return}if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const _st=lerStatus(c,$("edSt").value,ini);if(_st.erro){$("edErr").textContent=_st.erro;$("edI").focus();return}if("ini" in _st.p)ini=_st.p.ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
       dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,pv:2,ini,fim,atualizado:Date.now(),..._st.p,ini,...(()=>{if(!$("edPai"))return {};const np=$("edPai").value||null;if(np===(c.pai||null))return {};const o={pai:np};const pp=np&&S.cards[np];if(pp){o.etp=pp.etp||null}const P=S.projetos[c.pj]||{};o.ord=doPj(c.pj).filter(([x,y])=>x!==id&&(y.pai||null)===np&&chaveEt(P,y)===chaveEt(P,pp||{etp:$("edEt").value||null})).reduce((m,[,y])=>Math.max(m,ordDe(y)),0)+1;return o})()});
     {const novoEt=$("edEt").value||null;if(novoEt!==(c.etp||null))filhos(id).forEach(([k])=>DB.set("cards",k,{etp:novoEt}))}if(_st.p.estado!==c.estado)logMov(id,c,c.estado,_st.p.estado,"status alterado na edição");fechar();if(VOLTA){const v=VOLTA;VOLTA=null;v()}return}
@@ -1639,7 +1648,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "sitok":{const v=$("siT").value.trim();DB.set("cards",id,{sit:v||null,atualizado:Date.now()});if(v)logMov(id,c,c.estado,c.estado,"situação: "+v);fechar();return}
   case "feito":{const inp=b.closest(".foot").querySelector('[data-feito]');const t=inp&&inp.value.trim();if(!t)return;inp.value="";inp.blur();registraFeito(alvo(inp,b.dataset.p),t);return}
   case "novaacao":{NOVO_PAI=b.dataset.pai||"";const doBk=b.dataset.dest==="back"&&b.dataset.pj&&b.closest(".sheet");VOLTA=doBk?(()=>{const pj=b.dataset.pj;ULT_ET="";return ()=>gBacklog(pj,ULT_ET||b.dataset.etp)})():null;gAcao(b.dataset.p,{tipo:b.dataset.tipo,pj:b.dataset.pj,dest:b.dataset.dest,etp:b.dataset.etp});if(doBk){const cb=document.querySelector('.sheet .bts [data-a=fechar]');if(cb)cb.dataset.a="edcanc"}return}
-  case "acaook":{ULT_ET=$("naEt")?$("naEt").value:"";const t=$("naT").value.replace(/\s+/g," ").trim();if(!t){$("naErr").textContent="Escreva a ação.";return}if(!confEsf($("naE"),$("naErr")))return;let _st=null;if($("naSt")){_st=lerStatus(null,$("naSt").value,$("naI").value||null);if(_st.erro){$("naErr").textContent=_st.erro;$("naI").focus();return}}const dest=b.dataset.dest;const sp=sprint();
+  case "acaook":{if($("naT")){$("naT").value=capIni($("naT").value);if(!checaAcao($("naT")))return}ULT_ET=$("naEt")?$("naEt").value:"";const t=$("naT").value.replace(/\s+/g," ").trim();if(!t){$("naErr").textContent="Escreva a ação.";return}if(!confEsf($("naE"),$("naErr")))return;let _st=null;if($("naSt")){_st=lerStatus(null,$("naSt").value,$("naI").value||null);if(_st.erro){$("naErr").textContent=_st.erro;$("naI").focus();return}}const dest=b.dataset.dest;const sp=sprint();
     if(dest==="sprint"&&!sp){$("naErr").textContent="Não há sprint cadastrada.";return}
     const dono=$("naD").value;const now=Date.now();const com=[...document.querySelectorAll("[data-nacom]:checked")].map(x=>x.value).filter(x=>x!==dono);
     const vt=$("naVt")?$("naVt").value:"",vc=$("naVc")?$("naVc").value:"";if(vt&&!vc){$("naErr").textContent="Escolha a ação ligada.";return}

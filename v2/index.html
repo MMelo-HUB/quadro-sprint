@@ -70,6 +70,7 @@ select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--or
 .bkn{font-weight:700;color:var(--muted);font-size:.88em;min-width:2.2em;font-variant-numeric:tabular-nums}.bkn.big{font-size:.8em;min-width:0;margin-right:.2em}
 .alca{cursor:grab;color:var(--muted);font-size:.8em;letter-spacing:-2px;user-select:none}.bki.arr{cursor:grab}.bki.arrastando{opacity:.4}
 .bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
+.cod{font-size:.72em;font-weight:700;color:var(--muted);letter-spacing:.04em;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -549,8 +550,12 @@ function setSync(t,k){const el=$("sync");el.textContent=t;el.dataset.k=k||""}
 /* ================= banco ================= */
 const COL={cards:"q2_cards",mov:"q2_mov",sprints:"q2_sprints",daily:"q2_daily",cfg:"q2_config",projetos:"q2_projetos",comp:"q2_comp",retro:"q2_retro",pessoas:"q2_pessoas",rec:"q2_rec"};
 let fs=null,DEMOST={};
+/* código único e curto de cada ação (rastreabilidade): 4 caracteres, sem O/0/I/1/L */
+const CODA="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function novoCod(){const usados=new Set(Object.values(S.cards||{}).map(c=>c&&c.cod).filter(Boolean));for(let t=0;t<200;t++){const a=crypto.getRandomValues(new Uint8Array(4));const k=[...a].map(b=>CODA[b%CODA.length]).join("");if(!usados.has(k))return k}return nid().slice(-5).toUpperCase()}
+let CODT=null;function codificar(){if(!ADMIN)return;clearTimeout(CODT);CODT=setTimeout(()=>{Object.entries(S.cards||{}).filter(([,c])=>c&&!c.cod).sort((a,b)=>(a[1].criado||0)-(b[1].criado||0)).forEach(([id,c])=>{const k=novoCod();c.cod=k;DB.set("cards",id,{cod:k})})},1500)}
 const DB={
-  set(c,id,data){
+  set(c,id,data){if(c==="cards"&&data&&!data.cod&&!(S.cards&&S.cards[id]&&S.cards[id].cod)&&(data.t||data.dono)&&!(S.cards&&S.cards[id]))data={...data,cod:novoCod()};
     if(DEMO){const o=DEMOST[c]||(DEMOST[c]={});o[id]={...(o[id]||{}),...data};Object.keys(o[id]).forEach(k=>{if(o[id][k]===null)delete o[id][k]});saveDemo();aplicarDemo();return Promise.resolve()}
     return fs.collection(COL[c]).doc(id).set(data,{merge:true}).catch(falha)},
   add(c,data){return DB.set(c,nid(),data)}
@@ -1199,7 +1204,7 @@ function gBacklog(id){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.d
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n).sort(pOrd),i]);
   const outros=todas.filter(([,c])=>!ets.includes(c.etp)).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c],pi,et)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+(et>=0?(et+1)+".":"")+(pi+1)+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+  const li=([cid,c],pi,et)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+(et>=0?(et+1)+".":"")+(pi+1)+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+(c.cod?' <span class="cod">'+c.cod+'</span>':'')+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
     
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
@@ -1465,7 +1470,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
-function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Código",c.cod],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
 function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
   abrir('<h2>'+(pj&&posBk(pj,cid)?'<span class="bkn big">'+posBk(pj,cid)+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
@@ -1771,7 +1776,7 @@ function gate(msg,err){$("gate").hidden=false;$("gMsg").textContent=msg||"Entre 
 function startDemo(){try{DEMOST=JSON.parse(localStorage.getItem(DKEY)||"{}")}catch(e){DEMOST={}}
   S.pessoasBase=(window.DEMO_ANTIGO&&window.DEMO_ANTIGO.equipe||[]).map(c=>({id:c.id,n:c.n}));S.pessoas=S.pessoasBase;
   LEITURA=Q.has("leitura");ADMIN=!Q.has("membro")&&!LEITURA;MEMBRO=!ADMIN&&!LEITURA;QUEM="demo";if(LEITURA)MEU=null;document.body.classList.toggle("admin",ADMIN);document.body.classList.toggle("membro",MEMBRO);
-  PRONTO=true;setSync(ESPELHO?"Espelho do banco: só leitura, nada é salvo no Firebase":"Teste local (não é o banco de verdade)","warn");if(ADMIN)makeQR();aplicarDemo()}
+  PRONTO=true;setSync(ESPELHO?"Espelho do banco: só leitura, nada é salvo no Firebase":"Teste local (não é o banco de verdade)","warn");if(ADMIN)makeQR();aplicarDemo();codificar()}
 /* modo espelho: lê o quadro antigo ao vivo (só leitura) e monta tudo só neste navegador */
 async function carregaEspelho(){setSync("Lendo o banco do quadro antigo…","");
   try{const A={};for(const k of ["cards","dly","mov"]){const sn=await fs.collection(k).get();A[k]={};sn.docs.forEach(d=>A[k][d.id]=d.data())}
@@ -1921,7 +1926,7 @@ function assinar(){PRONTO=true;let ok=false;const tarde=setTimeout(()=>{if(!ok)s
   const pronto=()=>{if(!ok){ok=true;clearTimeout(tarde);setSync("Ao vivo","ok")}};
   const err=e=>{clearTimeout(tarde);console.error(e);if(e&&e.code==="permission-denied")gate("Seu acesso terminou. Entre de novo ou escaneie o QR.");else setSync("Conexão caiu: recarregue","warn")};
   /* projeto próprio do v2: não existe board/equipe (era do quadro antigo); a equipe vem só de q2_pessoas */S.pessoasBase=S.pessoasBase||[];
-  fs.collection(COL.cards).onSnapshot(sn=>{const o={};sn.docs.forEach(d=>o[d.id]=d.data());S.cards=o;render();if(!sn.metadata.fromCache)pronto()},err);
+  fs.collection(COL.cards).onSnapshot(sn=>{const o={};sn.docs.forEach(d=>o[d.id]=d.data());S.cards=o;render();if(!sn.metadata.fromCache){pronto();codificar()}},err);
   fs.collection(COL.mov).where("ts",">=",REF-86400000*20).onSnapshot(sn=>{const o={};sn.docs.forEach(d=>o[d.id]=d.data());S.mov=o;render()},err);
   fs.collection(COL.sprints).onSnapshot(sn=>{const o={};sn.docs.forEach(d=>o[d.id]=d.data());S.sprints=o;render()},err);
   fs.doc(COL.cfg+"/geral").onSnapshot(sn=>{S.cfg=sn.exists?sn.data():{};render()},err);

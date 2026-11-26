@@ -73,6 +73,9 @@ select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--or
 .bki.dentro{outline:2px solid var(--blue);outline-offset:-2px;background:#eef4ff}.bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
 .cod{font-size:.72em;font-weight:700;color:var(--muted);letter-spacing:.04em;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
 .bki.sub{margin-left:1.8em;background:var(--bg)}.bki.sub .bkn{font-size:.8em}.nsub{font-size:.75em;white-space:nowrap}
+.pjint{display:flex;justify-content:space-between;align-items:center;gap:1em;border:2px dashed #c4b5fd;background:#faf7ff;border-radius:14px;padding:.8em 1em;margin:0 0 1em}.pjint h3{margin:0 0 .3em;color:#6d28d9}.pjint h3 small{font-weight:600;color:var(--muted);font-size:.7em;margin-left:.4em}
+.ichip{display:inline-block;font-size:.78em;font-weight:700;background:#ede9fe;color:#5b21b6;border-radius:99px;padding:.12em .6em;margin:0 .3em .3em 0}.ichip.vaz{background:#f4f4f5;color:var(--muted);font-weight:600}.ichip b{margin-left:.2em}
+.bki.rec{background:#faf7ff}.eapst.rec{background:#ede9fe;color:#5b21b6}.lst.recl{margin-top:.4em}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -774,7 +777,7 @@ function verboOk(t){const w=String(t||"").trim().split(/\s+/)[0]||"";const b=w.t
 function checaAcao(el){if(!el)return true;const bt=document.querySelector(el.id==="naT"?'[data-a="acaook"]':'[data-a="editok"]');const av=$(el.id+"Av");const v=el.value.trim();
   const ok=!!v&&verboOk(v);if(av)av.textContent=!v?"":ok?"":"Comece com um verbo no infinitivo (ex.: Elaborar, Enviar, Conduzir, Realizar).";if(bt)bt.disabled=!ok;el.classList.toggle("alerta",!!v&&!ok);return ok}
 document.addEventListener("input",e=>{const t=e.target;if(!t||(t.id!=="naT"&&t.id!=="edT"))return;const c=capIni(t.value);if(c!==t.value){const p=t.selectionStart;t.value=c;try{t.setSelectionRange(p,p)}catch(x){}}checaAcao(t)});
-let NOVO_PAI="";let VOLTA=null,EDPJ="",ULT_ET="";
+let NOVO_PAI="",ULT_ACAO=null;let VOLTA=null,EDPJ="",ULT_ET="";
 const PRIS=[[1,"Urgente"],[2,"Importante"],[3,"Média"],[4,"Normal"]];const priDe=c=>c&&c.pv===2?(+c.pri||4):({1:2}[c&&c.pri]||4);
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];
 const catDe=c=>c.cat||c.tipo||null;
@@ -1189,7 +1192,10 @@ function gAt(pid,aid){const P=S.projetos[pid];const a=atDe(P,aid);const et=etapa
 function drawProj(){const pjs=Object.entries(S.projetos).filter(([,x])=>x&&x.ativo!==false).sort((a,b)=>(a[1].dono===MEU?0:1)-(b[1].dono===MEU?0:1)||a[1].nome.localeCompare(b[1].nome,"pt"));
   const soltos=[...new Set(Object.values(S.cards).filter(c=>c&&!c.apagado&&c.proj&&!c.pj).map(c=>c.proj))];
   let h='<div class="ptop"><div><h1>Projetos e serviços</h1><div class="sub">Cada um tem as próprias etapas e marcos. O responsável mantém a etapa atual.</div></div><div class="dacts" style="margin:0">'+
-    (ADMIN&&soltos.length?'<button class="btn" data-a="pjimport">Criar a partir dos '+soltos.length+' nomes usados nos cards</button>':'')+'<button class="btn" data-a="reclist" data-id="">Recorrentes internas</button>'+(ADMIN&&pjArq().length?'<button class="btn" data-a="pjarqlist">Arquivados ('+pjArq().length+')</button>':'')+'<button class="btn pri" data-a="pjnovo">+ projeto ou serviço</button></div></div>';
+    (ADMIN&&soltos.length?'<button class="btn" data-a="pjimport">Criar a partir dos '+soltos.length+' nomes usados nos cards</button>':'')+''+(ADMIN&&pjArq().length?'<button class="btn" data-a="pjarqlist">Arquivados ('+pjArq().length+')</button>':'')+'<button class="btn pri" data-a="pjnovo">+ projeto ou serviço</button></div></div>';
+  {const ci=doPj(INT);const ab=ci.filter(([,c])=>c.estado!=="conc").length;const nr=Object.values(S.rec).filter(r=>r&&!r.apagado&&!r.pj&&r.ativo!==false).length;
+   h+='<div class="pjint"><div><h3>Interno <small>ações da equipe</small></h3><div class="q">'+Object.entries(CATS).map(([k,l])=>{const n=ci.filter(([,c])=>catDe(c)===k&&c.estado!=="conc").length;return '<span class="ichip'+(n?'':' vaz')+'">'+esc(l)+(n?' <b>'+n+'</b>':'')+'</span>'}).join("")+'</div>'+
+     '<div class="q">'+ab+' em aberto · '+nr+' recorrente(s) ativa(s)</div></div><div class="dacts" style="margin:0"><button class="btn sm pri" data-a="intback">Abrir</button></div></div>'}
   if(!pjs.length)return h+'<div class="empty">Nenhum projeto cadastrado ainda.</div>';
   return h+'<div class="gridpj">'+pjs.map(([id,P])=>{const back=Object.values(S.cards).filter(c=>c&&!c.apagado&&c.pj===id&&!c.sprint).length;const nasp=cardsSprint().filter(([,c])=>c.pj===id);const pm=proxMarco(P);
     const pode=ADMIN||P.dono===MEU;const nrec=Object.values(S.rec).filter(r=>r&&r.ativo!==false&&r.pj===id).length;const nbol=bolsistas().filter(b=>b.pjs.includes(id));
@@ -1226,9 +1232,14 @@ function lerMarcos(txt){return txt.split("\n").map(l=>l.trim()).filter(Boolean).
   return {data:ano+"-"+String(mes).padStart(2,"0")+"-"+String(+m[1]).padStart(2,"0"),t:m[4]}}).filter(Boolean)}
 /* backlog: ID fixo por projeto (num) e ordem lógica dentro da etapa (ord) */
 const ordDe=c=>c.ord!=null?+c.ord:(c.criado||0);
-const doPj=pj=>Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===pj);
-const maxNum=pj=>Object.values(S.cards).filter(c=>c&&c.pj===pj).reduce((m,c)=>Math.max(m,+c.num||0),0);
-const chaveEt=(P,c)=>(P.etapas||[]).includes(c.etp)?c.etp:"__sem";
+const INT="__int";
+const pjObj=id=>id===INT?{nome:"Interno",etapas:Object.values(CATS),sigla:"INT",dono:null,virtual:true}:S.projetos[id];
+const ehDoPj=(c,id)=>id===INT?(!c.pj&&!!catDe(c)):c.pj===id;
+const etpDe=(P,c)=>P&&P.virtual?(CATS[catDe(c)]||null):c.etp;
+const doPj=pj=>Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&!c.rec&&ehDoPj(c,pj));
+const maxNum=pj=>Object.values(S.cards).filter(c=>c&&ehDoPj(c,pj)).reduce((m,c)=>Math.max(m,+c.num||0),0);
+const chaveEt=(P,c)=>{const e=etpDe(P,c);return (P.etapas||[]).includes(e)?e:"__sem"};
+const pjDoCard=c=>c.pj||(catDe(c)?INT:null);
 function numerarPj(pj){const sem=doPj(pj).filter(([,c])=>!c.num).sort((a,b)=>(a[1].criado||0)-(b[1].criado||0));let n=maxNum(pj);sem.forEach(([cid,c])=>{if(ADMIN||podeMexer(c)){n++;c.num=n;DB.set("cards",cid,{num:n})}})}
 /* árvore do backlog: ações principais e subações (pai = id da principal, um nível só) */
 function arvore(cs,base){const ids=new Set(cs.map(([x])=>x));const byId=Object.fromEntries(cs);const pOrd=(a,b)=>ordDe(a[1])-ordDe(b[1]);
@@ -1236,30 +1247,34 @@ function arvore(cs,base){const ids=new Set(cs.map(([x])=>x));const byId=Object.f
   const T=cs.filter(top).sort(pOrd);const out=[];
   T.forEach((t,ti)=>{const cod=base+(ti+1);out.push([t,cod,0]);cs.filter(x=>!top(x)&&x[1].pai===t[0]).sort(pOrd).forEach((k,ki)=>out.push([k,cod+"."+(ki+1),1]))});
   return out}
-function posBk(pj,cid){const P=S.projetos[pj]||{};const c=S.cards[cid];if(!c)return "";const k=chaveEt(P,c);const e=(P.etapas||[]).indexOf(c.etp);
+function posBk(pj,cid){const P=pjObj(pj)||{};const c=S.cards[cid];if(!c)return "";const k=chaveEt(P,c);const e=(P.etapas||[]).indexOf(etpDe(P,c));
   const L=arvore(doPj(pj).filter(([,x])=>chaveEt(P,x)===k),e>=0?(e+1)+".":"");const it=L.find(([[x]])=>x===cid);return it?it[1]:""}
 function gBkMover(cid,alvo,pos,pj){const c=S.cards[cid],a=S.cards[alvo];if(!c||!a)return;
   const txt=pos==="dentro"?'para <b>dentro</b> de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>? Ela vira uma subação.':'para '+(pos==="antes"?"antes":"depois")+' de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>?'+((c.pai||"")!==(a.pai||"")?(a.pai?' Ela vira uma subação.':' Ela vira uma ação principal.'):'');
   abrir('<h2>'+(pos==="dentro"?"Colocar dentro?":"Mudar a ordem?")+'</h2><p>Mover <b>'+posBk(pj,cid)+' · '+esc(c.t)+'</b></p><p>'+txt+'</p>'+
    '<div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri" data-a="bkmvok" data-id="'+cid+'" data-alvo="'+alvo+'" data-pos="'+pos+'" data-bk="'+pj+'">'+(pos==="dentro"?"Colocar dentro":"Mover")+'</button></div>')}
-function gBacklog(id,abreEt){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
-  const todas=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===id);
+function gBacklog(id,abreEt){numerarPj(id);const P=pjObj(id);if(!P)return;const vt=!!P.virtual;const pode=vt||ADMIN||P.dono===MEU;const ets=P.etapas||[];
+  const todas=doPj(id);const catK=n=>Object.keys(CATS).find(k=>CATS[k]===n)||"";
+  const recs=vt?Object.entries(S.rec).filter(([,r])=>r&&!r.apagado&&!r.pj):[];
+  const recLi=([rid,r])=>'<div class="li bki rec"><span class="bkn">↻</span><span class="bkc"><b class="bkt">'+esc(r.t)+'</b><small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),(+r.tu<4?"manhã":"tarde")+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt"><span class="eapst rec">recorrente</span><button class="btn sm" data-a="recedit" data-id="'+rid+'" data-bk="'+id+'">Editar</button></span></div>';
   const st=c=>{const x=statusDe(c);return x==="afazer"?["back",""]:[x,x==="prog"?"programado "+dm(c.ini):STATX[x]]};
   const pOrd=(a,b)=>ordDe(a[1])-ordDe(b[1]);
-  const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n).sort(pOrd),i]);
-  const outros=todas.filter(([,c])=>!ets.includes(c.etp)).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
+  const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>etpDe(P,c)===n).sort(pOrd),i]);
+  const outros=todas.filter(([,c])=>!ets.includes(etpDe(P,c))).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?(vt?"Sem categoria":"Sem etapa"):"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
   const li=([cid,c],cod,nv,n)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);const nf=nv?0:filhos(cid).length;return '<div class="li bki'+(nv?' sub':'')+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'" data-dpai="'+esc(nv?c.pai:"")+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+cod+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+(c.cod?' <span class="cod">'+codTxt(c)+'</span>':'')+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+(c.sprint===S.cfg.sprint&&c.estado!=="conc"?'<span class="eapst sp">nesta sprint</span>':'')+
     
     (nf?'<span class="ct nsub">'+filhos(cid).filter(([,x])=>x.estado==="conc").length+'/'+nf+' sub</span>':'')+
-    (pode&&!nv?'<button class="btn sm" data-a="novaacao" data-p="'+esc(c.dono||P.dono||MEU||"")+'" data-pj="'+id+'" data-etp="'+esc(c.etp||"")+'" data-pai="'+cid+'" data-dest="back" title="Adicionar uma subação dentro desta">+ sub</button>':'')+
+    (pode&&!nv?'<button class="btn sm" data-a="novaacao" data-p="'+esc(c.dono||P.dono||MEU||"")+'" data-pj="'+(vt?"":id)+'" data-bkid="'+id+'"'+(vt?' data-tipo="'+esc(catDe(c)||"")+'"':'')+' data-etp="'+esc(etpDe(P,c)||"")+'" data-pai="'+cid+'" data-dest="back" title="Adicionar uma subação dentro desta">+ sub</button>':'')+
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
-  abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
-   (todas.length||ets.length?grupos.map(([n,cs,i])=>{const feitas=cs.filter(([,c])=>c.estado==="conc").length;const atual=i===(P.etapa||0);
-     return '<details class="eap'+(atual?' atual':'')+'"'+(atual||!n||n===abreEt||cs.some(([,c])=>c.sprint===S.cfg.sprint)?' open':'')+'><summary>'+(n?'<b>'+esc(n)+(atual?' <em>etapa atual</em>':'')+'</b>':'<b></b>')+'<span class="eapn">'+feitas+'/'+cs.length+'</span><span class="eapb"><i style="width:'+(cs.length?Math.round(100*feitas/cs.length):0)+'%"></i></span></summary>'+
-       (cs.length?'<div class="lst">'+arvore(cs,i>=0?(i+1)+".":"").map(([x,cod,nv])=>li(x,cod,nv,n)).join("")+'</div>':'<p class="ct">Nenhuma ação ainda.</p>')+
-       (pode&&i>=0?'<button class="btn sm" style="margin-top:.4em" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-etp="'+esc(n)+'" data-dest="back">+ ação nesta etapa</button>':'')+'</details>'}).join(""):'<p class="ct">Nada no backlog.</p>')+
-   '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>','larga')}
+  const ttl=vt?'<h2>Interno · ações da equipe</h2><p class="ct">Gestão da equipe, administrativo, institucional, melhoria contínua e capacitação. Cada ação pode ser única ou recorrente.</p>':'<h2>Backlog · '+esc(P.nome)+'</h2>';
+  abrir(ttl+'<span hidden><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p></span>'+(vt?'':'<p class="ct">'+todas.length+' ações · '+todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length+' no backlog · '+todas.filter(([,c])=>c.estado==="conc").length+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>')+
+   (todas.length||ets.length?grupos.map(([n,cs,i])=>{const rs=vt?recs.filter(([,r])=>(CATS[catDe(r)]||"Sem categoria")===n):[];const feitas=cs.filter(([,c])=>c.estado==="conc").length;const atual=!vt&&i===(P.etapa||0);
+     return '<details class="eap'+(atual?' atual':'')+'"'+(atual||!n||n===abreEt||(vt&&(cs.length||rs.length))||cs.some(([,c])=>c.sprint===S.cfg.sprint)?' open':'')+'><summary>'+(n?'<b>'+esc(n)+(atual?' <em>etapa atual</em>':'')+'</b>':'<b></b>')+'<span class="eapn">'+feitas+'/'+cs.length+'</span><span class="eapb"><i style="width:'+(cs.length?Math.round(100*feitas/cs.length):0)+'%"></i></span></summary>'+
+       (cs.length?'<div class="lst">'+arvore(cs,i>=0?(i+1)+".":"").map(([x,cod,nv])=>li(x,cod,nv,n)).join("")+'</div>':(rs.length?'':'<p class="ct">Nenhuma ação ainda.</p>'))+
+       (rs.length?'<div class="lst recl">'+rs.map(recLi).join("")+'</div>':'')+
+       (pode&&i>=0?'<button class="btn sm" style="margin-top:.4em" data-a="novaacao" data-p="'+esc(vt?(MEU||""):(P.dono||MEU||""))+'" data-pj="'+(vt?"":id)+'" data-bkid="'+id+'"'+(vt?' data-tipo="'+catK(n)+'"':'')+' data-etp="'+esc(n)+'" data-dest="back">+ ação '+(vt?"nesta categoria":"nesta etapa")+'</button>':'')+'</details>'}).join(""):'<p class="ct">Nada no backlog.</p>')+
+   '<div class="bts">'+(pode&&!vt?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-bkid="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>','larga')}
 
 /* arrastar no backlog: solta antes/depois de outra ação da mesma etapa e pede confirmação */
 (()=>{let DRG=null;const limpa=()=>document.querySelectorAll(".bki.antes,.bki.depois,.bki.dentro").forEach(x=>x.classList.remove("antes","depois","dentro"));
@@ -1340,8 +1355,8 @@ function gRecList(pj){const L=Object.entries(S.rec).filter(([,r])=>r&&!r.apagado
   abrir('<h2>Recorrentes · '+(P?esc(P.nome):"internas")+'</h2>'+
    (L.length?'<div class="lst">'+L.map(([rid,r])=>'<div class="li"><span>'+esc(r.t)+'<small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),(+r.tu<4?"manhã":"tarde")+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><button class="btn sm" data-a="recedit" data-id="'+rid+'">Editar</button></div>').join("")+'</div>':'<p class="ct">Nenhuma ainda.</p>')+
    '<div class="bts"><button class="btn esq pri" data-a="recnovo" data-id="'+(pj||"")+'">+ atividade recorrente</button><button class="btn" data-a="fechar">Fechar</button></div>')}
-function gRec(rid,pj){const r=rid?S.rec[rid]:{freq:"sem",dias:[2],tu:4,pi:0,dur:1,ini:HOJE,ate:"",part:MEU?[MEU]:[],pj:pj||null,fase:"exec"};const fr=rid?frenteDe(r):(pj?"p:"+pj:"");
-  abrir('<h2>'+(rid?"Editar recorrente":"Nova atividade recorrente")+'</h2>'+
+function gRec(rid,pj,pre){pre=pre||{};const r=rid?S.rec[rid]:{t:pre.t||"",freq:"sem",dias:[2],tu:4,pi:0,dur:1,ini:HOJE,ate:"",part:MEU?[MEU]:[],pj:pj||null,fase:"exec"};const fr=rid?frenteDe(r):(pre.fr||(pj?"p:"+pj:""));
+  abrir('<h2>'+(rid?"Editar recorrente":"Nova atividade recorrente")+'</h2>'+(!rid&&fr.startsWith("c:")?'<label class="f">Tipo<select id="rcTp"><option value="unica">Única</option><option value="rec" selected>Recorrente (repete toda semana ou todo mês)</option></select></label>':'')+
    '<label class="f"><span>Atividade<span class="req">*</span></span><input id="rcT" value="'+esc(r.t||"")+'" placeholder="Reunião de acompanhamento com o cliente"></label>'+
    '<label class="f">Frente<select id="rcFr">'+frenteOpts(fr)+'</select></label>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase"><span>Participantes<span class="req">*</span></span></div>'+todosChk("data-rcp",r.part||[],null)+
@@ -1386,8 +1401,9 @@ function gBol(id){const b=id?S.pessoasX[id]:{hsem:20};
    '<p class="ct" id="boErr" style="color:var(--no)"></p><div class="bts">'+(id?'<button class="btn esq" data-a="bolfim" data-id="'+id+'">Desligar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="bolok" data-id="'+(id||"")+'">Salvar</button></div>')}
 
 /* ================= gavetas novas ================= */
-function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";const pai=NOVO_PAI&&S.cards[NOVO_PAI];
-  abrir('<h2>'+(pai?"Nova subação":o.dest==="back"?"Nova ação no backlog":"Nova ação na sprint")+'</h2>'+(pai?'<p class="ct">Dentro de <b>'+esc(posBk(pai.pj,NOVO_PAI))+' · '+esc(pai.t)+'</b></p>':'')+
+function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";const pai=NOVO_PAI&&S.cards[NOVO_PAI];ULT_ACAO={p,o};
+  abrir('<h2>'+(pai?"Nova subação":o.dest==="back"?(o.tipo?"Nova ação interna":"Nova ação no backlog"):"Nova ação na sprint")+'</h2>'+(pai?'<p class="ct">Dentro de <b>'+esc(posBk(pjDoCard(pai),NOVO_PAI))+' · '+esc(pai.t)+'</b></p>':'')+
+   (o.tipo&&o.dest==="back"&&!pai?'<label class="f">Tipo<select id="naTp"><option value="unica" selected>Única</option><option value="rec">Recorrente (repete toda semana ou todo mês)</option></select></label>':'')+
    '<label class="f"><span>Ação<span class="req">*</span></span><textarea id="naT" rows="2" placeholder="Elaborar o relatório de diagnóstico"></textarea><span class="avt" id="naTAv"></span></label>'+
    '<label class="f">Resultado esperado<input id="naR" placeholder="Relatório enviado ao cliente para validação"></label>'+
    '<label class="f">Frente<select id="naFr" data-etpde="naEt">'+frenteOpts(fr)+'</select></label>'+
@@ -1522,9 +1538,9 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
-function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];const pai=c.pai&&S.cards[c.pai]&&!S.cards[c.pai].apagado?S.cards[c.pai]:null;return [["Código",codTxt(c)],["Faz parte de",pai?posBk(c.pj,c.pai)+" · "+pai.t:""],["Status",STATX[statusDe(c)]+(statusDe(c)==="prog"?" · início "+fDia(c.ini):"")],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];const pai=c.pai&&S.cards[c.pai]&&!S.cards[c.pai].apagado?S.cards[c.pai]:null;return [["Código",codTxt(c)],["Faz parte de",pai?posBk(pjDoCard(c),c.pai)+" · "+pai.t:""],["Status",STATX[statusDe(c)]+(statusDe(c)==="prog"?" · início "+fDia(c.ini):"")],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
-function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
+function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(pjObj(pj)||{}).dono===MEU;
   abrir('<h2>'+(pj&&posBk(pj,cid)?'<span class="bkn big">'+posBk(pj,cid)+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+
    '<div class="bts"><button class="btn esq" data-a="bkvolta" data-bk="'+pj+'">← Backlog</button>'+(pode?'<button class="btn pri" data-a="editar" data-id="'+cid+'" data-bk="'+pj+'">Editar</button>':'')+'</div>')}
@@ -1633,16 +1649,17 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     if(d!==c.dono)logMov(id,c,c.estado,c.estado,"passou de "+nome(c.dono)+" pra "+nome(d));fechar();return}
   case "editar":if(precisa()){EDPJ=b.dataset.bk||"";VOLTA=EDPJ?(()=>{const pj=EDPJ;return ()=>gBacklog(pj)})():null;gEditar(id)}return;
   case "bkdel":{if(!precisa())return;const pj=b.dataset.bk;abrir('<h2>Excluir ação?</h2><p><b>'+esc(c.t)+'</b></p><p class="ct">Ela sai do backlog e de qualquer sprint.'+(filhos(id).length?' As '+filhos(id).length+' subações dela viram ações principais.':'')+(c.estado==="conc"?' Atenção: esta ação já foi concluída e sai também do histórico da sprint.':'')+'</p><div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri no" data-a="bkdelok" data-id="'+id+'" data-bk="'+pj+'">Excluir</button></div>');return}
-  case "bkdelok":{if(!precisa())return;{const ks=filhos(id).sort((x,y)=>ordDe(x[1])-ordDe(y[1]));if(ks.length){const P=S.projetos[c.pj]||{};const p0=ordDe(c);const prox=doPj(c.pj).filter(([x,y])=>x!==id&&!y.pai&&chaveEt(P,y)===chaveEt(P,c)&&ordDe(y)>p0).map(([,y])=>ordDe(y)).sort((x,y)=>x-y)[0];ks.forEach(([k],i)=>DB.set("cards",k,{pai:null,ord:prox!=null?p0+(prox-p0)*(i+1)/(ks.length+1):p0+i+1}))}}DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
+  case "bkdelok":{if(!precisa())return;{const ks=filhos(id).sort((x,y)=>ordDe(x[1])-ordDe(y[1]));if(ks.length){const P=pjObj(pjDoCard(c))||{};const p0=ordDe(c);const prox=doPj(pjDoCard(c)).filter(([x,y])=>x!==id&&!y.pai&&chaveEt(P,y)===chaveEt(P,c)&&ordDe(y)>p0).map(([,y])=>ordDe(y)).sort((x,y)=>x-y)[0];ks.forEach(([k],i)=>DB.set("cards",k,{pai:null,ord:prox!=null?p0+(prox-p0)*(i+1)/(ks.length+1):p0+i+1}))}}DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
   case "edcanc":if(VOLTA){const v=VOLTA;VOLTA=null;v()}else fechar();return;
   case "bkver":gBkVer(id,b.dataset.bk);return;
-  case "bkmvok":{const pj=b.dataset.bk,P=S.projetos[pj]||{};const alvo=S.cards[b.dataset.alvo];if(!alvo||!c){gBacklog(pj);return}const k=chaveEt(P,alvo);const pos=b.dataset.pos;
+  case "bkmvok":{const pj=b.dataset.bk,P=pjObj(pj)||{};const alvo=S.cards[b.dataset.alvo];if(!alvo||!c){gBacklog(pj);return}const k=chaveEt(P,alvo);const pos=b.dataset.pos;
     const novoPai=pos==="dentro"?b.dataset.alvo:(alvo.pai||null);
     if(novoPai&&filhos(id).length){toast("Uma ação que tem subações não pode ir para dentro de outra.");gBacklog(pj);return}
     const sib=doPj(pj).filter(([x,cc])=>x!==id&&chaveEt(P,cc)===k&&(cc.pai||null)===novoPai).sort((p,q)=>ordDe(p[1])-ordDe(q[1]));let o;
     if(pos==="dentro"){o=sib.reduce((m,[,y])=>Math.max(m,ordDe(y)),0)+1}
     else{const ix=sib.findIndex(([x])=>x===b.dataset.alvo);const ante=pos==="antes"?sib[ix-1]:sib[ix],depo=pos==="antes"?sib[ix]:sib[ix+1];o=ante&&depo?(ordDe(ante[1])+ordDe(depo[1]))/2:ante?ordDe(ante[1])+1:depo?ordDe(depo[1])-1:0}
     const mud={ord:o,pai:novoPai,atualizado:Date.now()};if(c.etp!==alvo.etp)mud.etp=alvo.etp||null;DB.set("cards",id,mud);toast(pos==="dentro"?"Agora é uma subação":"Ordem atualizada");gBacklog(pj);return}
+  case "intback":gBacklog(INT);return;
   case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
   case "editok":{if($("edT")){$("edT").value=capIni($("edT").value);if(!checaAcao($("edT")))return}if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const _st=lerStatus(c,$("edSt").value,ini);if(_st.erro){$("edErr").textContent=_st.erro;$("edI").focus();return}if("ini" in _st.p)ini=_st.p.ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
@@ -1653,7 +1670,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "sit":if(precisa())gSit(id);return;
   case "sitok":{const v=$("siT").value.trim();DB.set("cards",id,{sit:v||null,atualizado:Date.now()});if(v)logMov(id,c,c.estado,c.estado,"situação: "+v);fechar();return}
   case "feito":{const inp=b.closest(".foot").querySelector('[data-feito]');const t=inp&&inp.value.trim();if(!t)return;inp.value="";inp.blur();registraFeito(alvo(inp,b.dataset.p),t);return}
-  case "novaacao":{NOVO_PAI=b.dataset.pai||"";const doBk=b.dataset.dest==="back"&&b.dataset.pj&&b.closest(".sheet");VOLTA=doBk?(()=>{const pj=b.dataset.pj;ULT_ET="";return ()=>gBacklog(pj,ULT_ET||b.dataset.etp)})():null;gAcao(b.dataset.p,{tipo:b.dataset.tipo,pj:b.dataset.pj,dest:b.dataset.dest,etp:b.dataset.etp});if(doBk){const cb=document.querySelector('.sheet .bts [data-a=fechar]');if(cb)cb.dataset.a="edcanc"}return}
+  case "novaacao":{NOVO_PAI=b.dataset.pai||"";const doBk=b.dataset.dest==="back"&&(b.dataset.bkid||b.dataset.pj)&&b.closest(".sheet");VOLTA=doBk?(()=>{const pj=b.dataset.bkid||b.dataset.pj;ULT_ET="";return ()=>gBacklog(pj,ULT_ET||b.dataset.etp)})():null;gAcao(b.dataset.p,{tipo:b.dataset.tipo,pj:b.dataset.pj,dest:b.dataset.dest,etp:b.dataset.etp});if(doBk){const cb=document.querySelector('.sheet .bts [data-a=fechar]');if(cb)cb.dataset.a="edcanc"}return}
   case "acaook":{if($("naT")){$("naT").value=capIni($("naT").value);if(!checaAcao($("naT")))return}ULT_ET=$("naEt")?$("naEt").value:"";const t=$("naT").value.replace(/\s+/g," ").trim();if(!t){$("naErr").textContent="Escreva a ação.";return}if(!confEsf($("naE"),$("naErr")))return;let _st=null;if($("naSt")){_st=lerStatus(null,$("naSt").value,$("naI").value||null);if(_st.erro){$("naErr").textContent=_st.erro;$("naI").focus();return}}const dest=b.dataset.dest;const sp=sprint();
     if(dest==="sprint"&&!sp){$("naErr").textContent="Não há sprint cadastrada.";return}
     const dono=$("naD").value;const now=Date.now();const com=[...document.querySelectorAll("[data-nacom]:checked")].map(x=>x.value).filter(x=>x!==dono);
@@ -1662,8 +1679,8 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
       estado:"prev",sprint:dest==="sprint"?S.cfg.sprint:null,plan:dest==="sprint"?!sp.fechado:true,blocos:[],criado:now,criadoPor:QUEM,atualizado:now};
     if(vt==="dep")nc.dep=vc;if(vt==="acomp")nc.acomp=vc;
     const nid2=dono+"-"+nid();if(_st){Object.assign(nc,_st.p);Object.keys(nc).forEach(k=>{if(nc[k]===null)delete nc[k]})}
-    const pai=NOVO_PAI&&S.cards[NOVO_PAI];if(pai&&pai.pj===nc.pj){nc.pai=NOVO_PAI;nc.etp=pai.etp||null}NOVO_PAI="";
-    if(nc.pj){nc.num=maxNum(nc.pj)+1;const P=S.projetos[nc.pj]||{};const k=chaveEt(P,nc);nc.ord=doPj(nc.pj).filter(([,x])=>chaveEt(P,x)===k&&(x.pai||"")===(nc.pai||"")).reduce((m,[,x])=>Math.max(m,ordDe(x)),0)+1}DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");
+    const pai=NOVO_PAI&&S.cards[NOVO_PAI];if(pai&&(pai.pj||null)===(nc.pj||null)){nc.pai=NOVO_PAI;nc.etp=pai.etp||null;if(!nc.pj&&catDe(pai)){nc.cat=catDe(pai)}}NOVO_PAI="";
+    const pjk=pjDoCard(nc);if(pjk){nc.num=maxNum(pjk)+1;const P=pjObj(pjk)||{};const k=chaveEt(P,nc);nc.ord=doPj(pjk).filter(([,x])=>chaveEt(P,x)===k&&(x.pai||"")===(nc.pai||"")).reduce((m,[,x])=>Math.max(m,ordDe(x)),0)+1}DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");
     fechar();if(dest==="sprint"){SEL=nid2;render();toast("Agora toque na grade pra encaixar")}else if(VOLTA){const v=VOLTA;VOLTA=null;v();toast("Ação adicionada")}return}
   case "trazer":{if(!precisa())return;const sp=sprint();if(!sp)return;DB.set("cards",id,{sprint:S.cfg.sprint,estado:"prev",plan:!sp.fechado,blocos:[],atualizado:Date.now()});logMov(id,c,"backlog","prev","trazida do backlog");
     if(!$("veu").hidden)fechar();SEL=id;toast("Na sprint. Encaixe na grade em Minha sprint.");return}
@@ -1741,19 +1758,19 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
         cron:[...document.querySelectorAll("[data-cri]")].map(x=>{const i=x.dataset.cri;let ini=x.value||null,fim=(document.querySelector('[data-crf="'+i+'"]')||{}).value||null;if(ini&&fim&&fim<ini)fim=ini;return {ini,fim}})}});DB.set("projetos",id,{atendidos:ats});fechar();gFicha(id,b.dataset.at);return}
   case "ficha":gFicha(id,b.dataset.at);return;
   case "fichapj":gFichaPj(id);return;
-  case "reclist":gRecList(id||null);return;
+  case "reclist":VOLTA=null;gRecList(id||null);return;
   case "recnovo":gRec(null,id||null);return;
-  case "recedit":gRec(id,null);return;
+  case "recedit":if(b.dataset.bk){const pj=b.dataset.bk;VOLTA=()=>gBacklog(pj)}gRec(id,null);if(VOLTA){const c=document.querySelector('.sheet .bts [data-a=fechar]');if(c)c.dataset.a="edcanc"}return;
   case "recok":{const t=$("rcT").value.trim(),part=[...document.querySelectorAll("[data-rcp]:checked")].map(x=>x.value),dias=[...document.querySelectorAll("[data-rcd]:checked")].map(x=>+x.value);
     const freq=$("rcF").value,ini=$("rcI").value,ate=$("rcA").value;
     if(!t||!part.length||!ate||!ini||ate<ini||(freq!=="mes"&&!dias.length)){$("rcErr").textContent="Preencha a atividade, quem participa, os dias, o início e o término (depois do início).";return}
     const fr=lerFrente($("rcFr").value);const rid2=id||("rc-"+nid());
     DB.set("rec",rid2,{t,...fr,part,freq,dias,tu:+$("rcTu").value,pi:+$("rcPi").value,dur:+$("rcD").value,ini,ate,ativo:true,fase:"exec"});
-    fechar();const n=S.cfg.sprint?geraRec(S.cfg.sprint):0;toast(n?n+" ocorrência(s) criadas nesta sprint":"Recorrente salva");return}
-  case "recfim":{DB.set("rec",id,{ate:HOJE,ativo:false});cardsSprint().filter(([,x])=>x.rec===id&&x.ini>HOJE&&x.estado==="prev").forEach(([cid])=>DB.set("cards",cid,{apagado:true}));fechar();toast("Recorrente encerrada");return}
+    fechar();const n=S.cfg.sprint?geraRec(S.cfg.sprint):0;toast(n?n+" ocorrência(s) criadas nesta sprint":"Recorrente salva");if(VOLTA){const v=VOLTA;VOLTA=null;v()}return}
+  case "recfim":{DB.set("rec",id,{ate:HOJE,ativo:false});cardsSprint().filter(([,x])=>x.rec===id&&x.ini>HOJE&&x.estado==="prev").forEach(([cid])=>DB.set("cards",cid,{apagado:true}));fechar();toast("Recorrente encerrada");if(VOLTA){const v=VOLTA;VOLTA=null;v()}return}
   case "recdel":{const r=S.rec[id];if(!r)return;const oc=Object.values(S.cards).filter(x=>x&&!x.apagado&&x.rec===id);const feitas=oc.filter(x=>x.estado==="conc").length;
     abrir('<h2>Excluir recorrente?</h2><p><b>'+esc(r.t)+'</b></p><p>Some de vez, junto com '+(oc.length?oc.length+" ocorrência(s) já criada(s)"+(feitas?", inclusive "+feitas+" já concluída(s)":""):"nenhuma ocorrência (nenhuma foi criada ainda)")+'. Use para algo cadastrado por engano ou de teste.</p><p class="ct">Se a atividade existiu e só vai parar, use <b>Encerrar hoje</b>: o que já foi feito continua registrado.</p><div class="bts"><button class="btn" data-a="recedit" data-id="'+id+'">Voltar</button><button class="btn pri no" data-a="recdelok" data-id="'+id+'">Excluir de vez</button></div>');return}
-  case "recdelok":{const pj=(S.rec[id]||{}).pj||null;let n=0;Object.entries(S.cards).forEach(([cid,x])=>{if(x&&!x.apagado&&x.rec===id){DB.set("cards",cid,{apagado:true,atualizado:Date.now()});n++}});DB.set("rec",id,{apagado:true,ativo:false});gRecList(pj);toast("Recorrente excluída"+(n?" · "+n+" ocorrência(s) removida(s)":""));return}
+  case "recdelok":{const pj=(S.rec[id]||{}).pj||null;let n=0;Object.entries(S.cards).forEach(([cid,x])=>{if(x&&!x.apagado&&x.rec===id){DB.set("cards",cid,{apagado:true,atualizado:Date.now()});n++}});DB.set("rec",id,{apagado:true,ativo:false});if(VOLTA){const v=VOLTA;VOLTA=null;v()}else gRecList(pj);toast("Recorrente excluída"+(n?" · "+n+" ocorrência(s) removida(s)":""));return}
   case "gerarec":{const n=geraRec(S.cfg.sprint);toast(n?n+" ocorrência(s) criadas":"Tudo em dia: as ocorrências desta sprint já estavam criadas");render();return}
   case "memimport":(S.pessoasBase||[]).forEach(p=>{if(!S.pessoasX[p.id])DB.set("pessoas",p.id,{n:p.n,tipo:"membro",email:"",org:false,daily:true,hdia:8,ativo:true})});toast("Membros trazidos. Agora informe o e-mail de cada um.");return;
   case "memnovo":gMem(null);return;
@@ -1815,6 +1832,8 @@ document.addEventListener("keydown",e=>{const t=e.target;
     if(e.key==="ArrowLeft"){e.preventDefault();document.querySelector('[data-a="ant"]')?.click()}
     if(e.key===" "){e.preventDefault();$("bGo").click()}}});
 document.addEventListener("change",e=>{const t=e.target;
+  if(t.id==="naTp"&&t.value==="rec"){const tx=$("naT")?$("naT").value:"";const fr=$("naFr")?$("naFr").value:"";const cb=VOLTA;gRec(null,null,{t:tx,fr});VOLTA=cb;if(VOLTA){const c=document.querySelector('.sheet .bts [data-a=fechar]');if(c)c.dataset.a="edcanc"}return}
+  if(t.id==="rcTp"&&t.value==="unica"){const tx=$("rcT")?$("rcT").value:"";const fr=$("rcFr")?$("rcFr").value:"";const cb=VOLTA;const u=ULT_ACAO||{p:MEU,o:{dest:"back"}};gAcao(u.p,{...u.o,tipo:fr.startsWith("c:")?fr.slice(2):u.o.tipo});VOLTA=cb;if($("naT")){$("naT").value=tx;checaAcao($("naT"))}if(VOLTA){const c=document.querySelector('.sheet .bts [data-a=fechar]');if(c)c.dataset.a="edcanc"}return}
   if(t.id==="impArq"&&t.files&&t.files[0]){const fr=new FileReader();fr.onload=()=>{try{const j=JSON.parse(fr.result);gImporta(j.dados||j)}catch(err){toast("Arquivo inválido: "+err.message)}t.value=""};fr.readAsText(t.files[0]);return}if(t.dataset&&t.dataset.rt&&t.dataset.rt.endsWith(":q")){const i=t.dataset.rt.split(":")[0];const d=document.querySelector('[data-rt="'+i+':dow"]'),o=document.querySelector('[data-rt="'+i+':oc"]');if(d)d.disabled=t.value==="dia";const di=document.querySelector('[data-rt="'+i+':datas"]');if(d)d.hidden=t.value==="datas";if(di){di.hidden=t.value!=="datas";if(!di.hidden)di.focus()}
     if(o){o.hidden=t.value==="datas";o.disabled=t.value!=="sprint"&&t.value!=="mes";[...o.options].forEach(op=>op.text=OCX[op.value]+(t.value==="mes"?" do mês":" da sprint"))}return}if(t.dataset&&t.dataset.etpde){$(t.dataset.etpde).innerHTML=etpOpts(t.value,"");$(t.dataset.etpde+"L").hidden=!etpsDe(t.value).length;return}if(t.dataset&&t.dataset.spf&&ADMIN){DB.set("sprints",S.cfg.sprint,{[t.dataset.spf]:t.value.trim()});toast("Salvo")}});
 /* arrastar entre colunas */

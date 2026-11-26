@@ -36,7 +36,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .fsec{border-top:1px solid var(--line,#e2e8f0);padding-top:.7em;display:flex;flex-direction:column;gap:.45em}.fsec:first-of-type{border-top:0;padding-top:0}
 .fsec h3{font-size:.8em;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--blue2);margin:0}.fsec>.ct{margin:-.2em 0 .1em}
 details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-items:baseline;flex-wrap:wrap}details.fsec>summary::before{content:"▸";color:var(--muted)}details.fsec[open]>summary::before{content:"▾"}details.fsec>summary h3{display:inline}
-.fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6em .8em}.fgrid .fnome{grid-column:1/-1}@media(max-width:640px){.fgrid{grid-template-columns:1fr}}
+.fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6em .8em}.fgrid .fnome{grid-column:1/3}@media(max-width:640px){.fgrid{grid-template-columns:1fr}}
 .lh,.lr{display:grid;gap:6px;align-items:center}.lh{font-size:.7em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}.lh>span{text-align:left}
 .lh-ets,.ll-ets .lr{grid-template-columns:22px 44px minmax(0,1fr) 150px 150px 32px 32px}
 .lh-mcs,.ll-mcs .lr{grid-template-columns:22px 150px minmax(0,1fr) 32px 32px}
@@ -553,6 +553,12 @@ let fs=null,DEMOST={};
 /* código único e curto de cada ação (rastreabilidade): 4 caracteres, sem O/0/I/1/L */
 const CODA="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 function novoCod(){const usados=new Set(Object.values(S.cards||{}).map(c=>c&&c.cod).filter(Boolean));for(let t=0;t<200;t++){const a=crypto.getRandomValues(new Uint8Array(4));const k=[...a].map(b=>CODA[b%CODA.length]).join("");if(!usados.has(k))return k}return nid().slice(-5).toUpperCase()}
+/* sigla do projeto: a escolhida, ou a primeira palavra que não seja genérica */
+const SIGPULA=new Set("programa projeto projetos servico servicos o a os as de da do das dos e com para por em no na apoio ao aos".split(" "));
+const limpaSig=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12);
+function siglaAuto(nm){const ws=String(nm||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);const w=ws.find(x=>!SIGPULA.has(x)&&!/^\d+$/.test(x))||ws[0]||"PROJ";return limpaSig(w)}
+const siglaPj=P=>P?(limpaSig(P.sigla)||siglaAuto(P.nome)):"";
+const codTxt=c=>c&&c.cod?((c.pj&&S.projetos[c.pj]?siglaPj(S.projetos[c.pj]):"INT")+"-"+c.cod):"";
 let CODT=null;function codificar(){if(!ADMIN)return;clearTimeout(CODT);CODT=setTimeout(()=>{Object.entries(S.cards||{}).filter(([,c])=>c&&!c.cod).sort((a,b)=>(a[1].criado||0)-(b[1].criado||0)).forEach(([id,c])=>{const k=novoCod();c.cod=k;DB.set("cards",id,{cod:k})})},1500)}
 const DB={
   set(c,id,data){if(c==="cards"&&data&&!data.cod&&!(S.cards&&S.cards[id]&&S.cards[id].cod)&&(data.t||data.dono)&&!(S.cards&&S.cards[id]))data={...data,cod:novoCod()};
@@ -1170,7 +1176,8 @@ const LBT='<button class="btn sm" data-a="lstsobe" title="Subir">↑</button><bu
 function lista(k,itens,vazio,botao){const L=LST[k];return '<div class="lh lh-'+k+'">'+L.cols.map(c=>'<span>'+c+'</span>').join("")+'</div><div class="ll ll-'+k+'" id="L_'+k+'" data-vazio="'+esc(vazio)+'">'+itens.map((x,i)=>L.linha(x,i)).join("")+'</div><button class="btn sm" data-a="lstadd" data-l="'+k+'">'+botao+'</button>'}
 const sec=(tit,dica,corpo)=>'<section class="fsec"><h3>'+tit+'</h3>'+(dica?'<p class="ct">'+dica+'</p>':'')+corpo+'</section>';
 function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas:[],marcos:[],etapa:0};const ed=!!id;
-  const basico='<div class="fgrid"><label class="f fnome"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'"></label>'+
+  const basico='<div class="fgrid"><label class="f fnome"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'" oninput="var g=document.getElementById(\'pjSg\');if(g)g.placeholder=siglaAuto(this.value)+\' (automática)\'"></label>'+
+   '<label class="f">Sigla<input id="pjSg" maxlength="12" value="'+esc(P.sigla||"")+'" placeholder="'+esc(siglaAuto(P.nome||"")||"CENTELHA")+' (automática)" style="text-transform:uppercase"></label>'+
    '<label class="f">Tipo<select id="pjT">'+opts([["projeto","Projeto (tem fim)"],["servico","Serviço (contínuo)"]],P.tipo)+'</select></label>'+
    '<label class="f">Responsável<select id="pjD"><option value="">—</option>'+pessoasOpt(P.dono)+'</select></label>'+
    '<label class="f">Contratante ou parceiro<input id="pjC" value="'+esc(P.cliente||"")+'" placeholder="Sebrae, Caixa…"></label></div>';
@@ -1204,7 +1211,7 @@ function gBacklog(id){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.d
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n).sort(pOrd),i]);
   const outros=todas.filter(([,c])=>!ets.includes(c.etp)).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c],pi,et)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+(et>=0?(et+1)+".":"")+(pi+1)+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+(c.cod?' <span class="cod">'+c.cod+'</span>':'')+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+  const li=([cid,c],pi,et)=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkn">'+(et>=0?(et+1)+".":"")+(pi+1)+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+(c.cod?' <span class="cod">'+codTxt(c)+'</span>':'')+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
     
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
@@ -1470,7 +1477,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
-function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Código",c.cod],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Código",codTxt(c)],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
 function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
   abrir('<h2>'+(pj&&posBk(pj,cid)?'<span class="bkn big">'+posBk(pj,cid)+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
@@ -1653,7 +1660,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "pjok":{const nm=$("pjN").value.trim();if(!nm){toast("Dê um nome.");return}const pid=id||("pj-"+nid());const V=id&&S.projetos[id]||{};
     const rows=k=>[...document.querySelectorAll("#L_"+k+" .lr")];
     const er=rows("ets").map(r=>({n:r.querySelector(".l1").value.trim(),o:r.dataset.o===""?null:+r.dataset.o,ini:r.querySelector(".l2").value||null,fim:r.querySelector(".l3").value||null,at:r.querySelector('input[type=radio]').checked})).filter(r=>r.n);
-    const o={nome:nm,tipo:$("pjT").value,dono:$("pjD").value||null,cliente:$("pjC").value.trim()||null,etapas:er.map(r=>r.n),cron:er.map(r=>({ini:r.ini,fim:r.fim&&r.ini&&r.fim<r.ini?r.ini:r.fim})),ativo:true};
+    const o={nome:nm,sigla:$("pjSg")?(limpaSig($("pjSg").value)||null):(V.sigla||null),tipo:$("pjT").value,dono:$("pjD").value||null,cliente:$("pjC").value.trim()||null,etapas:er.map(r=>r.n),cron:er.map(r=>({ini:r.ini,fim:r.fim&&r.ini&&r.fim<r.ini?r.ini:r.fim})),ativo:true};
     const ia=er.findIndex(r=>r.at);o.etapa=ia>=0?ia:(id?Math.min(V.etapa||0,Math.max(0,er.length-1)):0);
     if(id)er.forEach(r=>{if(r.o==null)return;const ant=(V.etapas||[])[r.o];if(ant&&ant!==r.n)Object.entries(S.cards).forEach(([cid,c])=>{if(c&&c.pj===id&&c.etp===ant)DB.set("cards",cid,{etp:r.n})})});
     if($("L_mcs"))o.marcos=rows("mcs").map(r=>({data:r.querySelector(".l2").value,t:r.querySelector(".l1").value.trim()})).filter(m=>m.data&&m.t).sort((a,b)=>a.data<b.data?-1:1);else if(!id)o.marcos=[];

@@ -731,7 +731,7 @@ const FASES={plan:"Planejamento",exec:"Execução",pos:"Pós-execução"};
 const CATS={gestao:"Gestão da equipe",adm:"Administrativo",inst:"Institucional",mel:"Melhoria contínua",cap:"Capacitação"};
 const TIPOS=CATS;
 /* esforço vazio: avisa no primeiro Salvar; no segundo, salva assim mesmo */
-function confEsf(sel,errEl){if(!sel||sel.value||sel.dataset.avisado==="1")return true;sel.dataset.avisado="1";sel.classList.add("alerta");sel.onchange=()=>sel.classList.remove("alerta");const t="O esforço não foi definido. Escolha um esforço, ou clique em Salvar de novo para salvar sem ele.";if(errEl)errEl.textContent=t;else toast(t,6000);sel.focus();return false}
+function confEsf(sel,errEl){if(!sel||sel.value||sel.dataset.avisado==="1")return true;sel.dataset.avisado="1";sel.classList.add("alerta");sel.onchange=()=>sel.classList.remove("alerta");const t="O esforço não foi definido.";if(errEl)errEl.textContent=t;else toast(t,6000);sel.focus();return false}
 /* prioridade: 1 urgente, 2 importante, 3 média, 4 normal (pv:2). Ações antigas (sem pv): alta→importante, normal/baixa→normal */
 const PRIS=[[1,"Urgente"],[2,"Importante"],[3,"Média"],[4,"Normal"]];const priDe=c=>c&&c.pv===2?(+c.pri||4):({1:2}[c&&c.pri]||4);
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];

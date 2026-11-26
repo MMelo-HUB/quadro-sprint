@@ -581,11 +581,11 @@ function mover(id,para,extra,motivo){const c=S.cards[id];if(!c)return;if(!podeMe
   if(para==="prev"&&(!c.ini||c.ini>HOJE)&&!(extra&&"ini" in extra))p.ini=HOJE;
   DB.set("cards",id,p);if(de!==para)logMov(id,c,de,para,motivo)}
 function novoCard(p,t,extra){const sp=S.cfg.sprint;if(!sp){toast("Cadastre a sprint primeiro.");return}const id=p+"-"+nid();const now=Date.now();
-  const c={t,dono:p,estado:"prev",ini:HOJE,sprint:sp,plan:false,pri:2,criado:now,criadoPor:QUEM,atualizado:now,...(extra||{})};
+  const c={t,dono:p,estado:"prev",ini:HOJE,sprint:sp,plan:false,pri:4,pv:2,criado:now,criadoPor:QUEM,atualizado:now,...(extra||{})};
   DB.set("cards",id,c);logMov(id,c,"novo","prev",extra&&extra.pai?"pra destravar outra":"fora da planning");return id}
 /* "fiz algo que não estava no quadro": nasce concluído, fora da planning */
 function registraFeito(p,t){const sp=S.cfg.sprint;if(!sp){toast("Cadastre a sprint primeiro.");return}const id=p+"-"+nid();const now=Date.now();
-  const c={t,dono:p,estado:"conc",concEm:now,ini:HOJE,sprint:sp,plan:false,pri:2,criado:now,criadoPor:QUEM,atualizado:now};
+  const c={t,dono:p,estado:"conc",concEm:now,ini:HOJE,sprint:sp,plan:false,pri:4,pv:2,criado:now,criadoPor:QUEM,atualizado:now};
   DB.set("cards",id,c);logMov(id,c,"novo","conc","feito fora do quadro");toast("Registrado como feito (fora da planning)")}
 function filhos(id){return Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pai===id)}
 /* "mudou desde ontem": cartões com movimento entre a última daily e o começo da de hoje */
@@ -732,6 +732,8 @@ const CATS={gestao:"Gestão da equipe",adm:"Administrativo",inst:"Institucional"
 const TIPOS=CATS;
 /* esforço vazio: avisa no primeiro Salvar; no segundo, salva assim mesmo */
 function confEsf(sel,errEl){if(!sel||sel.value||sel.dataset.avisado==="1")return true;sel.dataset.avisado="1";sel.classList.add("alerta");sel.onchange=()=>sel.classList.remove("alerta");const t="O esforço não foi definido. Escolha um esforço, ou clique em Salvar de novo para salvar sem ele.";if(errEl)errEl.textContent=t;else toast(t,6000);sel.focus();return false}
+/* prioridade: 1 urgente, 2 importante, 3 média, 4 normal (pv:2). Ações antigas (sem pv): alta→importante, normal/baixa→normal */
+const PRIS=[[1,"Urgente"],[2,"Importante"],[3,"Média"],[4,"Normal"]];const priDe=c=>c&&c.pv===2?(+c.pri||4):({1:2}[c&&c.pri]||4);
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];
 const catDe=c=>c.cat||c.tipo||null;
 const ehMel=c=>["mel","cap"].includes(catDe(c));
@@ -1199,7 +1201,7 @@ function geraRec(sid,sp){sp=sp||S.sprints[sid];if(!sp)return 0;let n=0;const now
   Object.entries(S.rec).forEach(([rid,r])=>{if(!r||r.ativo===false)return;
     diasUteis(sp.ini,sp.fim).filter(d=>caiEm(r,d)).forEach(d=>{const cid="rec-"+rid+"-"+d;if(S.cards[cid]&&!(S.cards[cid].apagado&&S.cards[cid].foraDatas))return;const part=r.part||[];if(!part.length)return;
       const bl=[];for(let k=0;k<r.dur;k++){const pt=+r.tu+(+r.pi||0)+k;if(pt<8)bl.push(d+"#"+pt)}
-      const c={t:r.t,pj:r.pj||null,at:r.at||null,cat:r.cat||null,dono:part[0],com:part.slice(1),esf:+r.dur,estado:"prev",sprint:sid,plan:true,rec:rid,ini:d,blocos:bl,fase:r.fase||"exec",pri:2,criado:now,criadoPor:"recorrente",atualizado:now,apagado:false,foraDatas:false};
+      const c={t:r.t,pj:r.pj||null,at:r.at||null,cat:r.cat||null,dono:part[0],com:part.slice(1),esf:+r.dur,estado:"prev",sprint:sid,plan:true,rec:rid,ini:d,blocos:bl,fase:r.fase||"exec",pri:4,pv:2,criado:now,criadoPor:"recorrente",atualizado:now,apagado:false,foraDatas:false};
       DB.set("cards",cid,c);n++})});return n}
 const pjArq=()=>Object.entries(S.projetos).filter(([,x])=>x&&x.ativo===false&&!x.apagado).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),"pt"));
 function gPjArq(){const L=pjArq();abrir('<h2>Projetos arquivados</h2><p class="hint" style="margin:0 0 .7em">Arquivado some das listas mas guarda tudo. Reative para voltar a usar, ou exclua de vez.</p>'+
@@ -1310,7 +1312,7 @@ function gAcao(p,o){o=o||{};const fr=o.tipo?"c:"+o.tipo:o.pj?"p:"+o.pj:"";
    '<label class="f">Frente<select id="naFr" data-etpde="naEt">'+frenteOpts(fr)+'</select></label>'+
    '<label class="f" id="naEtL"'+(etpsDe(fr).length?'':' hidden')+'>Etapa do projeto<select id="naEt">'+etpOpts(fr,o.etp||"")+'</select></label>'+
    '<div class="row"><label class="f">Fase<select id="naF">'+opts(Object.entries(FASES),"exec")+'</select></label><label class="f">Esforço<select id="naE">'+opts([["","— a definir"],...ESFS],"")+'</select></label></div>'+
-   '<div class="row"><label class="f">Prioridade<select id="naPr">'+opts([[1,"Alta"],[2,"Normal"],[3,"Baixa"]],2)+'</select></label><label class="f">Responsável<select id="naD">'+pessoasOpt(p)+'</select></label></div>'+
+   '<div class="row"><label class="f">Prioridade<select id="naPr">'+opts([...PRIS],4)+'</select></label><label class="f">Responsável<select id="naD">'+pessoasOpt(p)+'</select></label></div>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Junto com</div>'+todosChk("data-nacom",[],null)+
    (o.dest==="back"?'':'<div class="row"><label class="f">Ligada a outra ação<select id="naVt">'+opts([["","Não"],["acomp","Acompanha a ação…"],["dep","Depende da ação…"]],"")+'</select></label><label class="f">Qual ação<select id="naVc">'+vincOpts("")+'</select></label></div>')+
    '<p class="ct" id="naErr" style="color:var(--no)"></p><div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="acaook" data-dest="'+(o.dest||"sprint")+'">Salvar</button></div>')}
@@ -1435,7 +1437,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   L.push(b("pessoas","Passar pra outra pessoa ou fazer junto"),b("editar","Editar ação, resultado, projeto, fase, prazo…"));
   L.push(b("apagar","Tirar da sprint","no"));
   const P=c.pj&&S.projetos[c.pj];const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];
-  const det=[["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",{1:"Alta",3:"Baixa"}[c.pri]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+  const det=[["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1]);
   if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
@@ -1473,7 +1475,7 @@ function gEditar(id){const c=S.cards[id];const pjs=Object.entries(S.projetos).fi
    '<label class="f">Ligada a outra ação<select id="edVt">'+opts([["","Não"],["acomp","Acompanha a ação…"],["dep","Depende da ação…"]],c.dep?"dep":c.acomp?"acomp":"")+'</select></label></div>'+
    '<label class="f">Qual ação<select id="edVc">'+vincOpts(c.dep||c.acomp||"",id)+'</select></label>'+
    '<div class="row"><label class="f">Esforço<select id="edE">'+opts([["","— a definir"],...ESFS],c.esf||"")+'</select></label>'+
-   '<label class="f">Prioridade<select id="edPr">'+opts([[1,"Alta"],[2,"Normal"],[3,"Baixa"]],c.pri||2)+'</select></label></div>'+
+   '<label class="f">Prioridade<select id="edPr">'+opts([...PRIS],priDe(c))+'</select></label></div>'+
    '<div class="row"><label class="f">Início previsto<input id="edI" type="date" value="'+esc(c.ini||"")+'"></label><label class="f">Prazo<input id="edF" type="date" value="'+esc(c.fim||"")+'"></label></div>'+
    '<div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="editok" data-id="'+id+'">Salvar</button></div>')}
 /* raia de grupo ("g:id1,id2"): a pessoa vem do seletor ao lado do campo */
@@ -1542,7 +1544,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "editar":if(precisa())gEditar(id);return;
   case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
-      dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,ini,fim,atualizado:Date.now()});fechar();return}
+      dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,pv:2,ini,fim,atualizado:Date.now()});fechar();return}
   case "apagar":if(precisa())gMotivo(id,"apagarok","Tirar da sprint");return;
   case "apagarok":{const mo=$("moT").value.trim();if(!mo){$("moErr").textContent="Escreva o motivo.";return}DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,"fora","tirada da sprint: "+mo);fechar();toast("Tirada da sprint");return}
   case "sit":if(precisa())gSit(id);return;
@@ -1553,7 +1555,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     if(dest==="sprint"&&!sp){$("naErr").textContent="Não há sprint cadastrada.";return}
     const dono=$("naD").value;const now=Date.now();const com=[...document.querySelectorAll("[data-nacom]:checked")].map(x=>x.value).filter(x=>x!==dono);
     const vt=$("naVt")?$("naVt").value:"",vc=$("naVc")?$("naVc").value:"";if(vt&&!vc){$("naErr").textContent="Escolha a ação ligada.";return}
-    const nc={t,res:$("naR").value.trim()||null,...lerFrente($("naFr").value),etp:$("naEt").value||null,fase:$("naF").value,esf:$("naE").value?+$("naE").value:null,pri:+$("naPr").value,dono,com,
+    const nc={t,res:$("naR").value.trim()||null,...lerFrente($("naFr").value),etp:$("naEt").value||null,fase:$("naF").value,esf:$("naE").value?+$("naE").value:null,pri:+$("naPr").value,pv:2,dono,com,
       estado:"prev",sprint:dest==="sprint"?S.cfg.sprint:null,plan:dest==="sprint"?!sp.fechado:true,blocos:[],criado:now,criadoPor:QUEM,atualizado:now};
     if(vt==="dep")nc.dep=vc;if(vt==="acomp")nc.acomp=vc;
     const nid2=dono+"-"+nid();DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");
@@ -1791,7 +1793,7 @@ function aplicaBacklogs(SD){const norm=x=>String(x||"").toLowerCase().normalize(
     const ets=B.etapas.map(p=>p.n);
     DB.set("projetos",id,{nome:B.nome,tipo:at.tipo||B.tipo||"projeto",dono:at.dono||dono,cliente:at.cliente||B.cliente||null,etapas:ets,etapa:at.etapa||0,marcos:at.marcos||[],atendidos:at.atendidos||[],modeloAt:at.modeloAt||[],ativo:true});
     let k=0;B.etapas.forEach(p=>p.a.forEach(t=>{const cid="sim-bk"+bi+"-"+(k++);if(S.cards[cid])return;
-      DB.set("cards",cid,{t,res:null,dono:dono||MEU,com:[],pj:id,at:null,cat:null,etp:p.n,fase:p.f||"exec",esf:null,pri:2,estado:"prev",sprint:null,plan:true,blocos:[],criado:now,criadoPor:"simulação",atualizado:now})}))});
+      DB.set("cards",cid,{t,res:null,dono:dono||MEU,com:[],pj:id,at:null,cat:null,etp:p.n,fase:p.f||"exec",esf:null,pri:4,pv:2,estado:"prev",sprint:null,plan:true,blocos:[],criado:now,criadoPor:"simulação",atualizado:now})}))});
   DEMOST.seeds={...(DEMOST.seeds||{}),[SD.vbk]:Date.now()};saveDemo();aplicarDemo();toast("Backlog do Diálogo com a Indústria carregado")}
 /* correção só dos atendidos (etapas, etapa atual, concluídos), sem tocar nas ações */
 function corrigeAtendidos(SD){const norm=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g,"");

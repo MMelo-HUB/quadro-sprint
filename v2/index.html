@@ -76,7 +76,10 @@ select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--or
 .pjint{display:flex;justify-content:space-between;align-items:center;gap:1em;border:2px dashed #c4b5fd;background:#faf7ff;border-radius:14px;padding:.8em 1em;margin:0 0 1em}.pjint h3{margin:0 0 .3em;color:#6d28d9}.pjint h3 small{font-weight:600;color:var(--muted);font-size:.7em;margin-left:.4em}
 .ichip{display:inline-block;font-size:.78em;font-weight:700;background:#ede9fe;color:#5b21b6;border-radius:99px;padding:.12em .6em;margin:0 .3em .3em 0}.ichip.vaz{background:#f4f4f5;color:var(--muted);font-weight:600}.ichip b{margin-left:.2em}
 .bki.rec{background:#faf7ff}.eapst.rec{background:#ede9fe;color:#5b21b6}.lst.recl{margin-top:.4em}
-.rbk{margin:.2em 0 .8em}.rbkh{display:flex;align-items:baseline;gap:.8em;margin-bottom:.3em}.rbkh b{color:var(--blue2)}.rbkh .lnk{font-size:.8em}.rbkm>summary{cursor:pointer;font-weight:700;color:var(--muted);margin:.4em 0}
+details.rbk{border:1px solid var(--line);border-radius:12px;padding:.5em .8em;margin:0 0 .7em;background:var(--paper)}details.rbk>summary{cursor:pointer;display:flex;align-items:center;gap:.5em;flex-wrap:wrap;list-style:none}details.rbk>summary::before{content:"▾";color:var(--muted)}details.rbk:not([open])>summary::before{content:"▸"}
+details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}details.rbk>summary .lnk{margin-left:auto;font-size:.8em}
+.rch{font-size:.72em;font-weight:700;border-radius:99px;padding:.1em .55em;background:#f1f5f9;color:var(--muted)}.rch.and{background:#fff4d6;color:#8a5a00}.rch.prz{background:#fde2e2;color:#a12a2a}.rch.etp{background:#eef2ff;color:#3b4fa3}
+.rbp{margin:.5em 0 .2em}.rbpt{font-size:.72em;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:.25em}.rbkm>summary{cursor:pointer;font-weight:700;color:var(--muted);margin:.4em 0}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -921,25 +924,36 @@ let ARRASTOU=false;
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
 function desencaixa(id,k){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d,pt0]=k.split("#");const t0=+pt0<4?0:4;
   const nb=(c.blocos||[]).filter(b=>{const [bd,bp]=b.split("#");return !(bd===d&&+bp>=t0&&+bp<t0+4)});salvaBlocos(id,nb);SEL=id}
-/* backlog na raia: só em aberto; primeiro o que é da hora (etapa atual/período da etapa, programado ou prazo até o fim da sprint, em andamento/travado) */
+/* backlog na raia: só em aberto, um bloco por projeto, ordenado pelo que é mais urgente.
+   Entra na lista: em andamento/travado; início até o fim desta sprint; prazo até o fim da PRÓXIMA sprint; próximas 5 principais da etapa em curso (+ subações). */
 function backRaia(p,pode){const sp=sprint();const fimSp=sp?sp.fim:addDias(HOJE,13),iniSp=sp?sp.ini:HOJE;
+  const dur=sp?Math.round((meioDia(sp.fim)-meioDia(sp.ini))/86400000):12;const fimProx=addDias(fimSp,dur+2);
   const meus=Object.entries(S.projetos).filter(([,x])=>x&&!x.apagado&&x.dono===p).map(([id])=>id);
   const todas=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&!c.rec&&!c.sprint&&c.estado!=="conc"&&(c.dono===p||(c.com||[]).includes(p)||meus.includes(c.pj)));
-  /* da etapa em curso entram só as próximas 5 principais em aberto (na ordem do backlog) e as subações delas */
   const prox=new Set();const PROX=5;new Set(todas.map(([,c])=>c.pj).filter(Boolean)).forEach(pk=>{const P=S.projetos[pk];if(!P)return;(P.etapas||[]).forEach((n,ix)=>{const cr=(P.cron||[])[ix]||{};const emCurso=ix===(P.etapa||0)||(cr.ini&&cr.fim&&cr.ini<=fimSp&&cr.fim>=iniSp);if(!emCurso)return;
-    const ab=doPj(pk).filter(([,x])=>x.etp===n&&x.estado!=="conc"&&!x.pai).sort((a,b)=>ordDe(a[1])-ordDe(b[1])).slice(0,PROX);ab.forEach(([id])=>{prox.add(id);filhos(id).forEach(([k])=>prox.add(k))})})});
-  const daHora=c=>{if(c.estado==="and"||c.estado==="trav")return "agora";if(c.ini&&c.ini<=fimSp)return "programada";if(c.fim&&c.fim<=fimSp)return "prazo";
-    const pk=pjDoCard(c);const P=pk&&pjObj(pk);if(!P||P.virtual)return "interno";return Object.entries(S.cards).some(([k,x])=>x===c&&prox.has(k))?"próximas da etapa":""};
-  const ja=todas.map(([id,c])=>[id,c,daHora(c)]);const agora=ja.filter(x=>x[2]),depois=ja.filter(x=>!x[2]);
-  const grupo=L=>{const por={};L.forEach(x=>{const k=pjDoCard(x[1])||"__sem";(por[k]=por[k]||[]).push(x)});
-    return Object.entries(por).sort((a,b)=>((pjObj(a[0])||{}).nome||"").localeCompare((pjObj(b[0])||{}).nome||"","pt")).map(([k,xs])=>{const P=pjObj(k);
-      const it=xs.map(([id,c,mot])=>({id,c,mot,pos:k!=="__sem"?posBk(k,id):""})).sort((a,b)=>a.pos.localeCompare(b.pos,"pt",{numeric:true}));
-      return '<div class="rbk"><div class="rbkh"><b>'+esc(P?P.nome:"Sem projeto")+'</b>'+(P&&k!=="__sem"?'<button class="lnk" data-a="'+(P.virtual?"intback":"pjback")+'" data-id="'+esc(k)+'">ver backlog completo</button>':'')+'</div><div class="lista">'+
-        it.map(({id,c,mot,pos})=>'<div class="it"><span><span class="bkn">'+esc(pos)+'</span> '+esc(c.t)+(c.cod?' <span class="cod">'+codTxt(c)+'</span>':'')+'<small>'+[c.dono!==p?"de "+nome(c.dono)+(c.com&&c.com.includes(p)?" · você participa":""):"",STATX[statusDe(c)],c.ini?"início "+dm(c.ini):"",c.fim?"prazo "+dm(c.fim):"",c.esf?c.esf+"h":"esforço a definir",mot&&mot!=="interno"&&mot!=="agora"?"↳ "+mot:""].filter(Boolean).map(esc).join(" · ")+'</small></span>'+
-          (pode&&podeMexer(c)?'<button class="btn sm pri" data-a="trazer" data-id="'+id+'">Trazer pra sprint</button>':'')+'</div>').join("")+'</div></div>'}).join("")};
-  return '<div class="pbox"><h2>Backlog para puxar</h2><p class="hint" style="margin:0 0 .6em">Ações em aberto em que '+(p===MEU?"você é responsável ou participa":esc(nome(p))+" é responsável ou participa")+', e as dos projetos que '+(p===MEU?"você coordena":"coordena")+'. Primeiro o que é desta sprint: em andamento, programado ou com prazo até '+dm(fimSp)+', e as próximas da etapa em curso, na ordem do backlog.</p>'+
-    (agora.length?grupo(agora):'<div class="empty">Nada pede atenção nesta sprint.</div>')+
-    (depois.length?'<details class="rbkm"><summary>Mais adiante ('+depois.length+')</summary>'+grupo(depois)+'</details>':'')+'</div>'}
+    doPj(pk).filter(([,x])=>x.etp===n&&x.estado!=="conc"&&!x.pai).sort((a,b)=>ordDe(a[1])-ordDe(b[1])).slice(0,PROX).forEach(([id])=>{prox.add(id);filhos(id).forEach(([k])=>prox.add(k))})})});
+  // motivo: 0 em andamento/travado · 1 prazo/início próximo · 2 próximas da etapa · 3 interno (sem etapa) · null = mais adiante
+  const mot=(id,c)=>{if(c.estado==="and"||c.estado==="trav")return 0;if((c.ini&&c.ini<=fimSp)||(c.fim&&c.fim<=fimProx))return 1;const pk=pjDoCard(c);const P=pk&&pjObj(pk);if(P&&P.virtual)return 3;return prox.has(id)?2:null};
+  const dataDe=c=>[c.fim,c.ini].filter(Boolean).sort()[0]||"9999";
+  const linha=(k,id,c)=>{const pos=k!=="__sem"?posBk(k,id):"";const atras=c.fim&&c.fim<HOJE;
+    return '<div class="it"><span><span class="bkn">'+esc(pos)+'</span> '+esc(c.t)+(c.cod?' <span class="cod">'+codTxt(c)+'</span>':'')+'<small>'+[c.dono!==p?"de "+nome(c.dono)+(c.com&&c.com.includes(p)?" · você participa":""):"",STATX[statusDe(c)],c.ini?"início "+dm(c.ini):"",c.fim?(atras?"⚠ prazo vencido "+dm(c.fim):"prazo "+dm(c.fim)):"",c.esf?c.esf+"h":"esforço a definir"].filter(Boolean).map(esc).join(" · ")+'</small></span>'+
+      (pode&&podeMexer(c)?'<button class="btn sm pri" data-a="trazer" data-id="'+id+'">Trazer pra sprint</button>':'')+'</div>'};
+  const por={};const depois={};todas.forEach(([id,c])=>{const k=pjDoCard(c)||"__sem";const m=mot(id,c);if(m===null)(depois[k]=depois[k]||[]).push([id,c]);else (por[k]=por[k]||[]).push([id,c,m])});
+  const nomeK=k=>(pjObj(k)||{}).nome||"Sem projeto";
+  const blocos=Object.entries(por).map(([k,xs])=>{const n0=xs.filter(x=>x[2]===0).length,n1=xs.filter(x=>x[2]===1).length,n2=xs.filter(x=>x[2]===2).length;return {k,xs,n0,n1,n2,vt:k===INT||k==="__sem",d:Math.min(...xs.filter(x=>x[2]===1).map(x=>+dataDe(x[1]).replace(/-/g,"")||99999999),99999999)}})
+    .sort((a,b)=>(a.vt-b.vt)||(b.n0-a.n0)||(a.d-b.d)||(b.n1-a.n1)||nomeK(a.k).localeCompare(nomeK(b.k),"pt"));
+  const parte=(tit,L)=>L.length?'<div class="rbp"><div class="rbpt">'+tit+'</div><div class="lista">'+L.join("")+'</div></div>':'';
+  const bloco=b=>{const P=pjObj(b.k);const k=b.k;
+    const a0=b.xs.filter(x=>x[2]===0).sort((x,y)=>dataDe(x[1]).localeCompare(dataDe(y[1]))).map(([id,c])=>linha(k,id,c));
+    const a1=b.xs.filter(x=>x[2]===1).sort((x,y)=>dataDe(x[1]).localeCompare(dataDe(y[1]))).map(([id,c])=>linha(k,id,c));
+    const a2=b.xs.filter(x=>x[2]===2||x[2]===3).map(([id,c])=>[posBk(k,id),id,c]).sort((x,y)=>x[0].localeCompare(y[0],"pt",{numeric:true})).map(([,id,c])=>linha(k,id,c));
+    const chips=[b.n0?'<span class="rch and">'+b.n0+' em andamento</span>':'',b.n1?'<span class="rch prz">'+b.n1+' com prazo/início</span>':'',b.n2?'<span class="rch etp">'+b.n2+' da etapa</span>':'',(depois[k]||[]).length?'<span class="rch">+'+depois[k].length+' mais adiante</span>':''].join("");
+    return '<details class="rbk" open><summary><b>'+esc(P?P.nome:"Sem projeto")+'</b>'+chips+(P&&k!=="__sem"?'<button class="lnk" onclick="event.preventDefault()" data-a="'+(P.virtual?"intback":"pjback")+'" data-id="'+esc(k)+'">backlog completo</button>':'')+'</summary>'+
+      parte("Em andamento",a0)+parte("Prazo ou início próximo",a1)+parte(P&&P.virtual?"Ações":"Próximas da etapa",a2)+'</details>'};
+  const nDep=Object.values(depois).reduce((m,L)=>m+L.length,0);
+  return '<div class="pbox"><h2>Backlog para puxar</h2><p class="hint" style="margin:0 0 .6em">Ações em aberto em que '+(p===MEU?"você é responsável ou participa":esc(nome(p))+" é responsável ou participa")+', e as dos projetos que '+(p===MEU?"você coordena":"coordena")+'. Entram: em andamento, início até '+dm(fimSp)+', prazo até '+dm(fimProx)+' (fim da próxima sprint) e as próximas da etapa em curso.</p>'+
+    (blocos.length?blocos.map(bloco).join(""):'<div class="empty">Nada pede atenção nesta sprint.</div>')+
+    (nDep?'<details class="rbkm"><summary>Mais adiante ('+nDep+')</summary>'+Object.entries(depois).sort((a,b)=>nomeK(a[0]).localeCompare(nomeK(b[0]),"pt")).map(([k,L])=>'<div class="rbp"><div class="rbpt">'+esc(nomeK(k))+'</div><div class="lista">'+L.map(([id,c])=>[posBk(k,id),id,c]).sort((x,y)=>x[0].localeCompare(y[0],"pt",{numeric:true})).map(([,id,c])=>linha(k,id,c)).join("")+'</div></div>').join("")+'</details>':'')+'</div>'}
 function drawMinhaSprint(p){const sp=sprint();const C=capS(p);const pode=podeRaia(p);
   let h='<div class="pbox"><h2>Minha sprint</h2><div class="nums"><div><b>'+C.total+'h</b><span>na sprint</span></div><div><b>'+fh(C.rit)+'h</b><span>ritos da equipe</span></div><div><b>'+C.comp+'h</b><span>compromissos fixos</span></div><div><b>'+fh(C.meta)+'h</b><span>pra ações</span></div>'+
     '<div class="'+(C.pl>C.meta?"no":"ok")+'"><b>'+(C.pl)+'h</b><span>planejadas</span></div><div><b>'+C.reserva+'h</b><span>reserva pra imprevistos</span></div><div class="'+(C.folga?"no":"ok")+'"><b>'+C.folga+'h</b><span>folga sem registro</span></div></div>';

@@ -1321,8 +1321,8 @@ function drawSprint(){const sp=sprint();let h="";
   h+='<div class="box"><h2>Equipe</h2><div class="sub2" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Membros</div>'+
     (cadM?'<div class="lista">'+Object.entries(S.pessoasX).filter(([,x])=>x&&x.tipo==="membro").sort((a,b)=>a[1].n.localeCompare(b[1].n,"pt")).map(([id,x])=>'<div class="it"><span><b>'+esc(x.n)+'</b>'+(x.ativo===false?' <span class="stt trav">desligado</span>':'')+(papelDe(x)!=="membro"?' <span class="stt '+(papelDe(x)==="leitura"?"risco":"ok")+'">'+PAPEIS[papelDe(x)]+'</span>':'')+
         '<small>'+esc(x.email||"sem e-mail")+' · '+(temRaia(x)?(x.daily!==false?"participa da daily":"fora da daily")+' · '+(+x.hdia||8)+'h por dia':(papelDe(x)==="coord"?"sem raia · planning, revisão e retro":"sem raia · só visualiza"))+'</small></span><span class="bt"><button class="btn sm" data-a="memedit" data-id="'+id+'">Editar</button><button class="btn sm" data-a="senha" data-id="'+id+'">'+(x.temAcesso?"Redefinir senha":"Criar acesso")+'</button></span></div>').join("")+'</div>':
-      '<p>'+S.pessoas.map(p=>esc(p.n)).join(" · ")+'</p><p class="hint">Essa lista ainda vem do quadro antigo. Traga os membros pro cadastro novo pra informar e-mail, papel e acesso.</p><div class="dacts" style="justify-content:flex-start"><button class="btn" data-a="memimport">Trazer os membros do quadro antigo</button></div>')+
-    (cadM?'<div class="dacts"><button class="btn" data-a="memnovo">+ membro</button></div>':'')+
+      '<p class="hint">Nenhum membro cadastrado.</p>')+
+    '<div class="dacts"><button class="btn" data-a="memnovo">+ membro</button></div>'+
     '<div class="sub2" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:.6em">Bolsistas ('+bs.length+')</div>'+
     (bs.length?'<div class="lista">'+bs.map(b=>'<div class="it"><span><b>'+esc(b.n)+'</b><small>responsável: '+esc(nome(b.resp))+' · '+b.hsem+'h por semana'+(b.pjs.length?' · '+esc(b.pjs.map(x=>(S.projetos[x]||{}).nome).filter(Boolean).join(", ")):'')+'</small></span><button class="btn sm" data-a="boledit" data-id="'+b.id+'">Editar</button></div>').join("")+'</div>':'<p class="hint">Nenhum bolsista cadastrado.</p>')+
     '<div class="dacts"><button class="btn" data-a="bolnovo">+ bolsista</button></div></div>';
@@ -1585,8 +1585,8 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     if(em&&!DOM.test(em)){$("meErr").textContent="Use o e-mail corporativo (@al.senai.br ou @sistemafiea.com.br).";return}
     const dup=Object.entries(S.pessoasX).find(([k,x])=>x&&k!==id&&(x.email||"").toLowerCase()===em&&em);if(dup){$("meErr").textContent="Esse e-mail já é de "+dup[1].n+".";return}
     const velho=id&&S.pessoasX[id];if(velho&&velho.temAcesso&&(velho.email||"").toLowerCase()!==em){$("meErr").textContent="Essa pessoa já tem acesso com outro e-mail. Desligue e crie de novo, ou fale comigo.";return}
-    const pid=id||(n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"").slice(0,12)+"-"+nid().slice(-3));const papel=$("meO").value;const org=["org","coord"].includes(papel);
-    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),ativo:true});atualizaConta(pid,{org,papel});fechar();return}
+    const pid=id||(em&&em===String(QUEM).toLowerCase()&&MEU&&!S.pessoasX[MEU]?MEU:null)||(n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"").slice(0,12)+"-"+nid().slice(-3));const papel=$("meO").value;const org=["org","coord"].includes(papel);
+    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),ativo:true,...(!id&&pid===MEU?{temAcesso:true}:{})});atualizaConta(pid,{org,papel});fechar();return}
   case "memfim":DB.set("pessoas",id,{ativo:false});atualizaConta(id,{ativo:false});fechar();toast("Desligado: o acesso parou de funcionar.");return;
   case "memvolta":DB.set("pessoas",id,{ativo:true});fechar();toast("Religado. Crie um acesso novo com senha provisória.");return;
   case "senha":{const m=S.pessoasX[id];if(!m.email){toast("Cadastre o e-mail corporativo antes.");gMem(id);return}gSenha(id);return}

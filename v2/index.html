@@ -570,10 +570,10 @@ const partesDia=p=>{const x=pessoa(p);return x&&x.bol?Math.max(1,Math.min(8,Math
 const TURNOS=["Manhã","Tarde","Noite"];const NPT=12;const turnoDe=pt=>Math.floor(pt/4);const fimTurno=pt=>(turnoDe(pt)+1)*4;const turnoNome=pt=>TURNOS[turnoDe(pt)].toLowerCase();
 /* horas de trabalho da pessoa: começa na parte hini (0 = 1ª hora da manhã) e segue pelas horas do dia, atravessando turnos */
 const iniDe=p=>{const x=pessoa(p);return Math.max(0,Math.min(NPT-1,+(x&&x.hini)||0))};
-const trabalha=(p,pt)=>{const i=iniDe(p);return pt>=i&&pt<Math.min(NPT,i+partesDia(p))};
+/* sem horário fixo: todos os turnos ficam disponíveis pra todo mundo */const trabalha=(p,pt)=>true;
 const todosTrabalham=(parts,pt)=>parts.every(x=>trabalha(x,pt));
 let TURF={};try{TURF=JSON.parse(localStorage.getItem("q2-tur")||"{}")}catch(e){}
-const turnoFechado=(p,t)=>{if(t===1)return false;const k=p+"|"+t;if(k in TURF)return TURF[k];for(let pt=t*4;pt<t*4+4;pt++)if(trabalha(p,pt))return false;return true};
+const turnoFechado=(p,t)=>{if(t===1)return false;const k=p+"|"+t;return k in TURF?TURF[k]:false};
 const podeRaia=p=>{if(LEITURA)return false;if(ADMIN||MEU===p)return true;const x=pessoa(p);return !!(x&&x.bol&&x.resp===MEU)};
 const sprint=()=>S.sprints[S.cfg.sprint]||null;
 function toast(t,ms){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,ms||2600)}
@@ -1483,7 +1483,7 @@ function gRec(rid,pj,pre){pre=pre||{};const r=rid?S.rec[rid]:{t:pre.t||"",freq:"
 function gMem(id){const m=id?S.pessoasX[id]:{daily:true,hdia:8};
   abrir('<h2>'+(id?"Editar membro":"Novo membro")+'</h2><label class="f"><span>Nome<span class="req">*</span></span><input id="meN" value="'+esc(m.n||"")+'"></label>'+
    '<label class="f">E-mail corporativo<input id="meE" type="email" value="'+esc(m.email||"")+'" placeholder="nome.sobrenome@al.senai.br"></label>'+
-   '<div class="row"><label class="f">Papel<select id="meO">'+opts(Object.entries(PAPEIS),papelDe(m))+'</select></label><label class="f">Começa às<select id="meI">'+opts(Array.from({length:NPT},(_,i)=>[String(i),TURNOS[turnoDe(i)]+" · "+slotHora(i)]),String(+m.hini||0))+'</select></label><label class="f">Horas por dia<input id="meH" type="number" min="1" max="8" value="'+(+m.hdia||8)+'"></label></div>'+
+   '<div class="row"><label class="f">Papel<select id="meO">'+opts(Object.entries(PAPEIS),papelDe(m))+'</select></label><label class="f">Horas por dia<input id="meH" type="number" min="1" max="8" value="'+(+m.hdia||8)+'"></label></div>'+
    '<div class="chk"><label><input type="checkbox" id="meD"'+(m.daily!==false?" checked":"")+'> Participa da daily</label></div>'+
    '<p class="ct" id="meErr" style="color:var(--no)"></p><div class="bts">'+(id&&m.ativo!==false?'<button class="btn esq" data-a="memfim" data-id="'+id+'">Desligar (tira o acesso)</button>':'')+(id&&m.ativo===false?'<button class="btn esq" data-a="memvolta" data-id="'+id+'">Religar</button>':'')+
    '<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="memok" data-id="'+(id||"")+'">Salvar</button></div>')}
@@ -1510,7 +1510,7 @@ async function atualizaConta(pid,campos){if(DEMO)return;const P=S.pessoasX[pid];
 function gBol(id){const b=id?S.pessoasX[id]:{hsem:20};
   abrir('<h2>'+(id?"Editar bolsista":"Novo bolsista")+'</h2>'+
    '<label class="f"><span>Nome<span class="req">*</span></span><input id="boN" value="'+esc(b.n||"")+'"></label>'+
-   '<div class="row"><label class="f"><span>Membro responsável<span class="req">*</span></span><select id="boR"><option value="">—</option>'+membrosOpt(b.resp||"")+'</select></label><label class="f">Começa às<select id="boI">'+opts(Array.from({length:NPT},(_,i)=>[String(i),TURNOS[turnoDe(i)]+" · "+slotHora(i)]),String(+b.hini||0))+'</select></label><label class="f">Horas por semana<input id="boH" type="number" min="4" max="40" step="4" value="'+(b.hsem||20)+'"></label></div>'+
+   '<div class="row"><label class="f"><span>Membro responsável<span class="req">*</span></span><select id="boR"><option value="">—</option>'+membrosOpt(b.resp||"")+'</select></label><label class="f">Horas por semana<input id="boH" type="number" min="4" max="40" step="4" value="'+(b.hsem||20)+'"></label></div>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Projetos em que atua</div><div class="chk">'+
    (Object.entries(S.projetos).filter(([,x])=>x&&x.ativo!==false).map(([pid,x])=>'<label><input type="checkbox" data-bop value="'+pid+'"'+((b.pjs||(b.pj?[b.pj]:[])).includes(pid)?" checked":"")+'>'+esc(x.nome)+'</label>').join("")||'<span class="hint">Nenhum projeto cadastrado ainda.</span>')+'</div>'+
    '<p class="ct" id="boErr" style="color:var(--no)"></p><div class="bts">'+(id?'<button class="btn esq" data-a="bolfim" data-id="'+id+'">Desligar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="bolok" data-id="'+(id||"")+'">Salvar</button></div>')}
@@ -1832,7 +1832,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "priodel":{const sp=sprint();const pr=priosDe(sp).slice();pr.splice(+b.dataset.i,1);DB.set("sprints",S.cfg.sprint,{prios:pr});return}
   case "compconf":{const sp=sprint();const c={...(sp.confComp||{})};c[id]=!c[id];DB.set("sprints",S.cfg.sprint,{confComp:c});return}
   case "compok":{const t=$("cpT").value.trim();const dias=[...document.querySelectorAll("[data-cpd]:checked")].map(x=>x.value);if(!t||!dias.length){$("cpErr").textContent="Escreva o que é e marque pelo menos um dia.";return}
-    const tu=$("cpTu").value,n=+$("cpN").value;const bl=[];dias.forEach(d=>{if(tu==="dia"){for(let i=0;i<NPT;i++)if(trabalha(b.dataset.p,i))bl.push(d+"#"+i)}else for(let i=0;i<n;i++)bl.push(d+"#"+(+tu+i))});
+    const tu=$("cpTu").value,n=+$("cpN").value;const bl=[];dias.forEach(d=>{if(tu==="dia"){for(let i=0;i<partesDia(b.dataset.p);i++)bl.push(d+"#"+i)}else for(let i=0;i<n;i++)bl.push(d+"#"+(+tu+i))});
     DB.add("comp",{pessoa:b.dataset.p,sprint:S.cfg.sprint,t,blocos:bl,criado:Date.now(),por:QUEM});fechar();return}
   case "compdel":DB.set("comp",id,{apagado:true});fechar();return;
   case "pant":{const sp=sprint();DB.set("sprints",S.cfg.sprint,{pstep:Math.max(0,(sp.pstep||0)-1)});return}
@@ -1910,7 +1910,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     const dup=Object.entries(S.pessoasX).find(([k,x])=>x&&k!==id&&(x.email||"").toLowerCase()===em&&em);if(dup){$("meErr").textContent="Esse e-mail já é de "+dup[1].n+".";return}
     const velho=id&&S.pessoasX[id];if(velho&&velho.temAcesso&&(velho.email||"").toLowerCase()!==em){$("meErr").textContent="Essa pessoa já tem acesso com outro e-mail. Desligue e crie de novo, ou fale comigo.";return}
     const pid=id||(em&&em===String(QUEM).toLowerCase()&&MEU&&!S.pessoasX[MEU]?MEU:null)||(n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"").slice(0,12)+"-"+nid().slice(-3));const papel=$("meO").value;const org=["org","coord"].includes(papel);
-    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),hini:+($("meI")?$("meI").value:0)||0,ativo:true,...(!id&&pid===MEU?{temAcesso:true}:{})});atualizaConta(pid,{org,papel});fechar();return}
+    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),ativo:true,...(!id&&pid===MEU?{temAcesso:true}:{})});atualizaConta(pid,{org,papel});fechar();return}
   case "memfim":DB.set("pessoas",id,{ativo:false});atualizaConta(id,{ativo:false});fechar();toast("Desligado: o acesso parou de funcionar.");return;
   case "memvolta":DB.set("pessoas",id,{ativo:true});fechar();toast("Religado. Crie um acesso novo com senha provisória.");return;
   case "senha":{const m=S.pessoasX[id];if(!m.email){toast("Cadastre o e-mail corporativo antes.");gMem(id);return}gSenha(id);return}
@@ -1918,7 +1918,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "bolnovo":gBol(null);return;
   case "boledit":gBol(id);return;
   case "bolok":{const n=$("boN").value.trim(),r=$("boR").value;if(!n||!r){$("boErr").textContent="Nome e membro responsável são obrigatórios.";return}
-    DB.set("pessoas",id||("bol-"+nid()),{n,tipo:"bolsista",resp:r,hsem:+$("boH").value||20,hini:+($("boI")?$("boI").value:0)||0,pjs:[...document.querySelectorAll("[data-bop]:checked")].map(x=>x.value),pj:null,ativo:true});fechar();return}
+    DB.set("pessoas",id||("bol-"+nid()),{n,tipo:"bolsista",resp:r,hsem:+$("boH").value||20,pjs:[...document.querySelectorAll("[data-bop]:checked")].map(x=>x.value),pj:null,ativo:true});fechar();return}
   case "bolfim":DB.set("pessoas",id,{ativo:false});fechar();return;
   case "pjimport":{const grupos={};Object.entries(S.cards).forEach(([cid,x])=>{if(x&&!x.apagado&&x.proj&&!x.pj)(grupos[x.proj]=grupos[x.proj]||[]).push([cid,x])});
     Object.entries(grupos).forEach(([nm,cs])=>{const cont={};cs.forEach(([,x])=>cont[x.dono]=(cont[x.dono]||0)+1);const dono=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0][0];const pid="pj-"+nid();

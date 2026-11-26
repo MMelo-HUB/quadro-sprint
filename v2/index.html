@@ -88,7 +88,9 @@ details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}deta
 .sbghost{position:fixed;z-index:99;pointer-events:none;opacity:.9;box-shadow:0 6px 18px rgba(0,0,0,.18);border-color:var(--orange)!important;background:var(--orangeL)!important}.sbm.arrastando{opacity:.4}body.sbdrag{cursor:grabbing;user-select:none}button.sbm{touch-action:none}
 .sbh{display:flex;align-items:center;gap:.6em;flex-wrap:wrap}.sbparte{margin-left:auto;font-size:.9em;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:.4em}.sbparte select{width:auto;font-size:.95em;padding:.15em .3em}
 .grade td.gcard{position:relative;user-select:none;-webkit-user-select:none}.grade td[data-drag]{cursor:grab;touch-action:none}.rsz{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:26px;height:9px;border-radius:5px;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.25);cursor:ns-resize;touch-action:none;z-index:3}
-.rsz::before{content:"";position:absolute;left:6px;right:6px;top:3px;border-top:1px solid rgba(0,0,0,.45);border-bottom:1px solid rgba(0,0,0,.45);height:1px}.grade td.gcard:not(:hover) .rsz{opacity:.55}
+.rsz::before{content:"";position:absolute;left:6px;right:6px;top:3px;border-top:1px solid rgba(0,0,0,.45);border-bottom:1px solid rgba(0,0,0,.45);height:1px}.rsz{opacity:0;transition:opacity .2s}.grade td.gcard:hover .rsz{opacity:.8!important}.grade td.gcard.recem .rsz{animation:rszpisca 5s forwards}
+@keyframes rszpisca{0%,70%{opacity:.8}100%{opacity:0}}@media (hover:none){.rsz{display:none}}
+.trbt{display:flex;flex-wrap:wrap;gap:.4em;align-items:center;padding:.3em 0}.trbt .ct{width:100%;font-size:.8em}
 .rszov{position:fixed;z-index:98;pointer-events:none;border:2px dashed var(--blue);background:rgba(37,99,235,.10);border-radius:8px;display:flex;align-items:flex-end;justify-content:center;font-weight:800;color:var(--blue2);font-size:.8em;padding-bottom:2px}body.rszando{cursor:ns-resize;user-select:none}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
@@ -894,7 +896,7 @@ function gradeHtml(p){const dias=diasSp();const m=ocup(p);const mk=ritoMarcas(p)
       if(v.k==="rito")return '<td class="gcomp grito" rowspan="'+n+'" data-k="'+k+'" data-n="'+n+'" data-rito="'+v.ri+'" title="'+esc(v.t+" · "+v.h+" · "+v.min+" min")+'">'+cx(n,'<b>'+esc(v.t)+'</b><small>'+esc(v.h)+' · '+v.min+' min</small>')+'</td>';
       if(v.k==="comp")return '<td class="gcomp" rowspan="'+n+'" data-k="'+k+'" data-n="'+n+'" data-gc="'+v.id+'" title="'+esc(v.t)+'">'+cx(n,'<b>'+esc(v.t)+'</b><small>'+n+'h</small>')+'</td>';
       const c=S.cards[v.id]||{};const cor=corFrente(c);usados.set(projNome(c).split(" › ")[0]||"Sem frente",cor);
-      return '<td class="gcard'+(SEL===v.id?" sel":"")+(c.estado==="conc"?" gconc":"")+'" rowspan="'+n+'" style="--c:'+cor+'" data-k="'+k+'" data-n="'+n+'" data-gk="'+k+'" data-gid="'+v.id+'"'+(podeMexer(c)?' data-drag="1"':'')+' title="'+esc(c.t+" · "+(projNome(c)||"sem frente")+" · "+EST[c.estado])+'">'+
+      return '<td class="gcard'+(SEL===v.id?" sel":"")+(RECEM&&RECEM.id===v.id&&Date.now()-RECEM.t<5000?" recem":"")+(c.estado==="conc"?" gconc":"")+'" rowspan="'+n+'" style="--c:'+cor+'" data-k="'+k+'" data-n="'+n+'" data-gk="'+k+'" data-gid="'+v.id+'"'+(podeMexer(c)?' data-drag="1"':'')+' title="'+esc(c.t+" · "+(projNome(c)||"sem frente")+" · "+EST[c.estado])+'">'+
         cx(n,'<b>'+(c.estado==="conc"?"✓ ":"")+esc(c.t)+'</b><small>'+n+'h'+(projNome(c)?' · '+esc(projNome(c)):'')+'</small>'+Array.from({length:n},(_,j)=>mkh(d+"#"+(pt+j),j)).join("")+(podeMexer(c)&&c.estado!=="conc"?'<i class="rsz" title="Arraste pra aumentar ou diminuir"></i>':''))+'</td>'}).join("")+'</tr>'}
   h+='</tbody></table></div>';
   if(usados.size||Object.values(m).some(v=>v.k==="comp"))h+='<div class="leg">'+[...usados].map(([nm,cor])=>'<span><i style="background:'+cor+'"></i>'+esc(nm)+'</span>').join("")+(Object.values(m).some(v=>v.k==="comp")?'<span><i style="background:#c3cad8"></i>compromisso fixo</span>':'')+'<span>✓ concluída</span></div>';
@@ -905,7 +907,7 @@ function encaixa(id,k){const c=S.cards[id];if(!c)return;if(!podeMexer(c)){toast(
   const [d,pt0]=k.split("#");const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
   const total=(+c.esf||1)-(c.blocos||[]).length;let rest=PARTE?Math.min(PARTE,total):total;if(total<=0){toast("Essa ação já está toda na grade.");SEL=null;render();return}const sobra=total-rest;
   const nb=[...(c.blocos||[])];let pt=+pt0;const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,pt<4?4:8);while(rest>0&&pt<fimT&&!m[d+"#"+pt]){nb.push(d+"#"+pt);pt++;rest--}
-  salvaBlocos(id,nb);const falta=rest+sobra;if(falta<=0)SEL=null;else toast("Faltam "+falta+"h: "+(rest>0?"não coube tudo aí. ":"")+"toque ou arraste pra outro lugar da grade.")}
+  salvaBlocos(id,nb);RECEM={id,t:Date.now()};const falta=rest+sobra;if(falta<=0)SEL=null;else toast("Faltam "+falta+"h: "+(rest>0?"não coube tudo aí. ":"")+"toque ou arraste pra outro lugar da grade.")}
 /* move o trecho (n partes a partir de "de") pra começar em "para"; o que não couber volta pra "falta encaixar" */
 function moveTrecho(id,de,n,para){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d0,p0]=de.split("#");const run=new Set(Array.from({length:n},(_,j)=>d0+"#"+(+p0+j)));
   const base=(c.blocos||[]).filter(b=>!run.has(b));if(!para){salvaBlocos(id,base);toast("Tirada da grade: volta pra \"Para encaixar\"");return}
@@ -913,7 +915,7 @@ function moveTrecho(id,de,n,para){const c=S.cards[id];if(!c||!podeMexer(c))retur
   const [d,pt0]=para.split("#");const lim=Math.min(...parts.map(partesDia));let pt=+pt0;const fimT=Math.min(lim,pt<4?4:8);const nb=[...base];let rest=n;
   while(rest>0&&pt<fimT&&!m[d+"#"+pt]){nb.push(d+"#"+pt);pt++;rest--}
   if(rest===n){toast("Não cabe aí: esse horário já está ocupado.");return}
-  salvaBlocos(id,nb);if(rest>0)toast("Couberam "+(n-rest)+"h aí; faltam "+rest+"h pra encaixar.")}
+  salvaBlocos(id,nb);RECEM={id,t:Date.now()};if(rest>0)toast("Couberam "+(n-rest)+"h aí; faltam "+rest+"h pra encaixar.")}
 /* arrastar uma ação na grade: soltar numa parte move; soltar fora da grade tira */
 let ARRASTOU=false;
 (function(){let D=null;
@@ -933,6 +935,11 @@ let ARRASTOU=false;
     if(d.fora){moveTrecho(d.id,d.de,d.n,null);return}if(!d.para)return;
     const [pd,pp]=d.para.split("#");moveTrecho(d.id,d.de,d.n,pd+"#"+(+pp))};
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
+/* quanto um bloco pode crescer: até o fim do turno, sem invadir, usando o que falta encaixar */
+function limTrecho(id,d,p0,n0){const c=S.cards[id];const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
+  const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,p0<4?4:8);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p];p++)livre++;const falta=Math.max(0,(+c.esf||1)-(c.blocos||[]).length);return {maxN:Math.max(n0,Math.min(livre,n0+falta)),falta,livre}}
+function aplicaTrecho(id,d,p0,n0,n){const c=S.cards[id];const velho=new Set(Array.from({length:n0},(_,j)=>d+"#"+(p0+j)));const nb=(c.blocos||[]).filter(b=>!velho.has(b));for(let j=0;j<n;j++)nb.push(d+"#"+(p0+j));salvaBlocos(id,nb);RECEM={id,t:Date.now()};render()}
+let RECEM=null;
 /* alça do bloco: puxar pra baixo aumenta (até o fim do turno, sem invadir, usando o que falta encaixar); pra cima diminui (volta pra "falta encaixar") */
 (function(){let R=null;
   document.addEventListener("pointerdown",e=>{const h=e.target.closest(".rsz");if(!h||e.button>0)return;const td=h.closest(".grade td[data-gid]");if(!td)return;e.preventDefault();e.stopPropagation();
@@ -947,7 +954,7 @@ let ARRASTOU=false;
   const fim=e=>{if(!R)return;const x=R;R=null;x.ov.remove();document.body.classList.remove("rszando");ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);
     if(x.n===x.n0){const alvo=Math.round((e.clientY-x.r.top)/x.rowH+.25);if(alvo>x.n0)toast(x.falta?"Não cabe mais aqui: o turno acaba ou já tem outra coisa depois.":"Não há mais horas pra encaixar. Pra aumentar, mude o esforço em Editar.");return}
     const velho=new Set(Array.from({length:x.n0},(_,j)=>x.d+"#"+(x.p0+j)));const nb=(x.c.blocos||[]).filter(b=>!velho.has(b));for(let j=0;j<x.n;j++)nb.push(x.d+"#"+(x.p0+j));
-    salvaBlocos(x.id,nb);render();toast(x.n<x.n0?(x.n0-x.n)+"h voltaram pra encaixar: arraste pra outro dia.":"Agora com "+x.n+"h aqui.")};
+    salvaBlocos(x.id,nb);RECEM={id:x.id,t:Date.now()};render();toast(x.n<x.n0?(x.n0-x.n)+"h voltaram pra encaixar: arraste pra outro dia.":"Agora com "+x.n+"h aqui.")};
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
 /* arrastar do Sprint Backlog direto pra grade (um clique continua selecionando) */
 (function(){let D=null;
@@ -1626,7 +1633,10 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   L.push(b("pessoas","Passar pra outra pessoa ou fazer junto"),b("editar","Editar ação, resultado, projeto, fase, prazo…"));
   L.push(b("apagar","Tirar da sprint","no"));
   const det=detCard(c);
-  const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
+  const P=c.pj&&S.projetos[c.pj];  if(TRECHO&&TRECHO.id===id&&podeMexer(c)&&c.estado!=="conc"){const [d,p0]=TRECHO.k.split("#");const lm=limTrecho(id,d,+p0,TRECHO.n);
+    const bts=[];if(lm.maxN>TRECHO.n)bts.push('<button class="btn" data-a="trmais" data-id="'+id+'">＋1h neste bloco</button>');if(TRECHO.n>1)bts.push('<button class="btn" data-a="trmenos" data-id="'+id+'">−1h neste bloco</button>');
+    if(bts.length)L.splice(L.length-1,0,'<div class="trbt"><span class="ct">Bloco de '+fDia(d)+': '+TRECHO.n+'h</span>'+bts.join("")+'</div>')}
+  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
 
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
@@ -1789,6 +1799,9 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
       Array.from({length:T.n-1},(_,i)=>i+1).map(h=>'<button class="btn" data-a="dividirok" data-id="'+id+'" data-h="'+h+'">'+h+'h aqui · '+(T.n-h)+'h depois</button>').join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Cancelar</button></div>');return}
   case "dividirok":{if(!precisa()||!TRECHO||TRECHO.id!==id)return;const T=TRECHO;const [d,p0]=T.k.split("#");const h=+b.dataset.h;const tira=new Set(Array.from({length:T.n-h},(_,j)=>d+"#"+(+p0+h+j)));
     salvaBlocos(id,(c.blocos||[]).filter(x=>!tira.has(x)));TRECHO=null;SEL=id;fechar();render();toast("Ficaram "+h+"h aí. Agora arraste ou toque na grade pra encaixar as outras "+(T.n-h)+"h.");return}
+  case "trmais":case "trmenos":{if(!precisa()||!TRECHO||TRECHO.id!==id)return;const T=TRECHO;const [d,p0]=T.k.split("#");const lm=limTrecho(id,d,+p0,T.n);const n=a==="trmais"?T.n+1:T.n-1;
+    if(n<1||n>lm.maxN){toast(lm.falta?"Não cabe mais neste bloco.":"Não há mais horas pra encaixar. Aumente o esforço em Editar.");return}
+    aplicaTrecho(id,d,+p0,T.n,n);TRECHO={...T,n};gMenu(id);toast(a==="trmais"?"Bloco com "+n+"h":"Bloco com "+n+"h · 1h voltou pra encaixar");return}
   case "tiragrade":{if(!precisa())return;salvaBlocos(id,[]);fechar();toast("Tirada da grade: volta pra \"Para encaixar\"");return}
   case "irsprint":fechar();TAB="sprint";try{history.replaceState(null,"","#sprint")}catch(er){}render();return;
   case "ritonovo":{const R=lerRitos();R.push({n:"",q:"sprint",dow:5,oc:"u",hora:"",min:60,quem:"todos"});DB.set("cfg","geral",{ritos:R});return}

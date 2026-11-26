@@ -64,6 +64,7 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 .gleg{display:flex;gap:1.2em;flex-wrap:wrap;font-size:.74em;color:var(--muted);margin:.1em 0 .6em}.gleg span{display:flex;align-items:center;gap:.4em}.gleg i{display:inline-block;width:14px;height:0;border-top:2px solid}
 .gleg .lh{border-color:#c99700}.gleg .lp{border-top:2px dashed var(--blue)}.gleg .lm{width:10px;height:10px;border:0;background:var(--no);border-radius:2px}
 @media(max-width:640px){.gr{grid-template-columns:7em minmax(0,1fr)}.gd{display:none}}
+select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeL)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -729,6 +730,8 @@ let EUMODO="hoje";try{EUMODO=localStorage.getItem("q2-eumodo")||"hoje"}catch(e){
 const FASES={plan:"Planejamento",exec:"Execução",pos:"Pós-execução"};
 const CATS={gestao:"Gestão da equipe",adm:"Administrativo",inst:"Institucional",mel:"Melhoria contínua",cap:"Capacitação"};
 const TIPOS=CATS;
+/* esforço vazio: avisa no primeiro Salvar; no segundo, salva assim mesmo */
+function confEsf(sel,errEl){if(!sel||sel.value||sel.dataset.avisado==="1")return true;sel.dataset.avisado="1";sel.classList.add("alerta");sel.onchange=()=>sel.classList.remove("alerta");const t="O esforço não foi definido. Escolha um esforço, ou clique em Salvar de novo para salvar sem ele.";if(errEl)errEl.textContent=t;else toast(t,6000);sel.focus();return false}
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];
 const catDe=c=>c.cat||c.tipo||null;
 const ehMel=c=>["mel","cap"].includes(catDe(c));
@@ -1537,7 +1540,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "pessoasok":{const d=$("psD").value;const com=[...document.querySelectorAll("[data-com]:checked")].map(x=>x.value).filter(x=>x!==d);DB.set("cards",id,{dono:d,com,atualizado:Date.now()});
     if(d!==c.dono)logMov(id,c,c.estado,c.estado,"passou de "+nome(c.dono)+" pra "+nome(d));fechar();return}
   case "editar":if(precisa())gEditar(id);return;
-  case "editok":{let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
+  case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
       dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,ini,fim,atualizado:Date.now()});fechar();return}
   case "apagar":if(precisa())gMotivo(id,"apagarok","Tirar da sprint");return;
@@ -1546,7 +1549,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "sitok":{const v=$("siT").value.trim();DB.set("cards",id,{sit:v||null,atualizado:Date.now()});if(v)logMov(id,c,c.estado,c.estado,"situação: "+v);fechar();return}
   case "feito":{const inp=b.closest(".foot").querySelector('[data-feito]');const t=inp&&inp.value.trim();if(!t)return;inp.value="";inp.blur();registraFeito(alvo(inp,b.dataset.p),t);return}
   case "novaacao":gAcao(b.dataset.p,{tipo:b.dataset.tipo,pj:b.dataset.pj,dest:b.dataset.dest,etp:b.dataset.etp});return;
-  case "acaook":{const t=$("naT").value.replace(/\s+/g," ").trim();if(!t){$("naErr").textContent="Escreva a ação.";return}const dest=b.dataset.dest;const sp=sprint();
+  case "acaook":{const t=$("naT").value.replace(/\s+/g," ").trim();if(!t){$("naErr").textContent="Escreva a ação.";return}if(!confEsf($("naE"),$("naErr")))return;const dest=b.dataset.dest;const sp=sprint();
     if(dest==="sprint"&&!sp){$("naErr").textContent="Não há sprint cadastrada.";return}
     const dono=$("naD").value;const now=Date.now();const com=[...document.querySelectorAll("[data-nacom]:checked")].map(x=>x.value).filter(x=>x!==dono);
     const vt=$("naVt")?$("naVt").value:"",vc=$("naVc")?$("naVc").value:"";if(vt&&!vc){$("naErr").textContent="Escolha a ação ligada.";return}

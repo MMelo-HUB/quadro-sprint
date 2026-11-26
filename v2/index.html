@@ -66,6 +66,10 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 @media(max-width:640px){.gr{grid-template-columns:7em minmax(0,1fr)}.gd{display:none}}
 select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeL)}
 .lnk.bkt{text-align:left;font:inherit;color:var(--ink);padding:0;display:block}.lnk.bkt:hover{color:var(--blue);text-decoration:underline}
+.bki{display:flex;align-items:center;gap:.5em}.bki .bkc{flex:1;min-width:0}.bki .bt{margin-left:auto}
+.bkid{font-size:.72em;font-weight:800;color:var(--blue2);background:var(--bg);border-radius:6px;padding:.15em .4em;white-space:nowrap}.bkid.big{font-size:.6em;vertical-align:middle}
+.alca{cursor:grab;color:var(--muted);font-size:.8em;letter-spacing:-2px;user-select:none}.bki.arr{cursor:grab}.bki.arrastando{opacity:.4}
+.bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -1178,13 +1182,23 @@ function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas
   if(!ed)setTimeout(()=>{const n=$("pjN");if(n)n.focus()},50)}
 function lerMarcos(txt){return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{const m=l.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\s+(.+)$/);if(!m)return null;const mes=+m[2];const ano=m[3]?+m[3]:(mes<8?2027:2026);
   return {data:ano+"-"+String(mes).padStart(2,"0")+"-"+String(+m[1]).padStart(2,"0"),t:m[4]}}).filter(Boolean)}
-function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
+/* backlog: ID fixo por projeto (num) e ordem lógica dentro da etapa (ord) */
+const ordDe=c=>c.ord!=null?+c.ord:(c.criado||0);
+const doPj=pj=>Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===pj);
+const maxNum=pj=>Object.values(S.cards).filter(c=>c&&c.pj===pj).reduce((m,c)=>Math.max(m,+c.num||0),0);
+const chaveEt=(P,c)=>(P.etapas||[]).includes(c.etp)?c.etp:"__sem";
+function numerarPj(pj){const sem=doPj(pj).filter(([,c])=>!c.num).sort((a,b)=>(a[1].criado||0)-(b[1].criado||0));let n=maxNum(pj);sem.forEach(([cid,c])=>{if(ADMIN||podeMexer(c)){n++;c.num=n;DB.set("cards",cid,{num:n})}})}
+function gBkMover(cid,alvo,pos,pj){const c=S.cards[cid],a=S.cards[alvo];if(!c||!a)return;
+  abrir('<h2>Mudar a ordem?</h2><p>Mover <b>#'+(c.num||"?")+' · '+esc(c.t)+'</b></p><p>para '+(pos==="antes"?"antes":"depois")+' de <b>#'+(a.num||"?")+' · '+esc(a.t)+'</b>?</p>'+
+   '<div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri" data-a="bkmvok" data-id="'+cid+'" data-alvo="'+alvo+'" data-pos="'+pos+'" data-bk="'+pj+'">Mover</button></div>')}
+function gBacklog(id){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
   const todas=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===id);
   const st=c=>c.estado==="conc"?["conc","concluída"]:c.sprint===S.cfg.sprint?["sp","nesta sprint"]:c.sprint?["ant","sprint anterior"]:["back","backlog"];
-  const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n),i]);
-  const outros=todas.filter(([,c])=>!ets.includes(c.etp));if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
+  const pOrd=(a,b)=>ordDe(a[1])-ordDe(b[1]);
+  const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n).sort(pOrd),i]);
+  const outros=todas.filter(([,c])=>!ets.includes(c.etp)).sort(pOrd);if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+  const li=([cid,c])=>{const [k,tx]=st(c);const mv=pode||podeMexer(c);return '<div class="li bki'+(mv?' arr':'')+'"'+(mv?' draggable="true"':'')+' data-dcid="'+cid+'" data-dpj="'+id+'">'+(mv?'<span class="alca" title="Arraste para mudar a ordem">⋮⋮</span>':'')+'<span class="bkid">#'+(c.num||"–")+'</span><span class="bkc"><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
     
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
@@ -1194,6 +1208,13 @@ function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;cons
        (pode&&i>=0?'<button class="btn sm" style="margin-top:.4em" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-etp="'+esc(n)+'" data-dest="back">+ ação nesta etapa</button>':'')+'</details>'}).join(""):'<p class="ct">Nada no backlog.</p>')+
    '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>')}
 
+/* arrastar no backlog: solta antes/depois de outra ação da mesma etapa e pede confirmação */
+(()=>{let DRG=null;const limpa=()=>document.querySelectorAll(".bki.antes,.bki.depois").forEach(x=>x.classList.remove("antes","depois"));
+  document.addEventListener("dragstart",e=>{const it=e.target.closest&&e.target.closest(".bki.arr");if(!it)return;DRG={cid:it.dataset.dcid,lst:it.parentElement,pj:it.dataset.dpj};it.classList.add("arrastando");try{e.dataTransfer.setData("text/plain",DRG.cid);e.dataTransfer.effectAllowed="move"}catch(x){}});
+  document.addEventListener("dragend",e=>{document.querySelectorAll(".bki.arrastando").forEach(x=>x.classList.remove("arrastando"));limpa();setTimeout(()=>DRG=null,0)});
+  document.addEventListener("dragover",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!it||it.parentElement!==DRG.lst||it.dataset.dcid===DRG.cid)return;e.preventDefault();limpa();const r=it.getBoundingClientRect();it.classList.add(e.clientY<r.top+r.height/2?"antes":"depois")});
+  document.addEventListener("drop",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!it||it.parentElement!==DRG.lst||it.dataset.dcid===DRG.cid){limpa();return}e.preventDefault();const r=it.getBoundingClientRect();const pos=e.clientY<r.top+r.height/2?"antes":"depois";const d=DRG;limpa();DRG=null;gBkMover(d.cid,it.dataset.dcid,pos,d.pj)});
+})();
 /* ================= atividades recorrentes ================= */
 const FREQ={sem:"Toda semana",quin:"A cada 15 dias",mes:"Todo mês"};
 function caiEm(r,d){if(d<r.ini||d>r.ate)return false;
@@ -1446,7 +1467,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
 function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
     ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
 function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
-  abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
+  abrir('<h2>'+(c.num?'<span class="bkid big">#'+c.num+'</span> ':'')+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+
    '<div class="bts"><button class="btn esq" data-a="bkvolta" data-bk="'+pj+'">← Backlog</button>'+(pode?'<button class="btn pri" data-a="editar" data-id="'+cid+'" data-bk="'+pj+'">Editar</button>':'')+'</div>')}
 function gTravar(id){const c=S.cards[id];
@@ -1553,6 +1574,11 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "bkdelok":{if(!precisa())return;DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
   case "edcanc":if(VOLTA){const v=VOLTA;VOLTA=null;v()}else fechar();return;
   case "bkver":gBkVer(id,b.dataset.bk);return;
+  case "bkmvok":{const pj=b.dataset.bk,P=S.projetos[pj]||{};const alvo=S.cards[b.dataset.alvo];if(!alvo||!c){gBacklog(pj);return}const k=chaveEt(P,alvo);
+    const sib=doPj(pj).filter(([x,cc])=>x!==id&&chaveEt(P,cc)===k).sort((p,q)=>ordDe(p[1])-ordDe(q[1]));const ix=sib.findIndex(([x])=>x===b.dataset.alvo);
+    const ante=b.dataset.pos==="antes"?sib[ix-1]:sib[ix],depo=b.dataset.pos==="antes"?sib[ix]:sib[ix+1];
+    const o=ante&&depo?(ordDe(ante[1])+ordDe(depo[1]))/2:ante?ordDe(ante[1])+1:depo?ordDe(depo[1])-1:0;
+    const mud={ord:o,atualizado:Date.now()};if(c.etp!==alvo.etp)mud.etp=alvo.etp||null;DB.set("cards",id,mud);toast("Ordem atualizada");gBacklog(pj);return}
   case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
   case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
@@ -1570,7 +1596,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     const nc={t,res:$("naR").value.trim()||null,...lerFrente($("naFr").value),etp:$("naEt").value||null,fase:$("naF").value,esf:$("naE").value?+$("naE").value:null,pri:+$("naPr").value,pv:2,dono,com,
       estado:"prev",sprint:dest==="sprint"?S.cfg.sprint:null,plan:dest==="sprint"?!sp.fechado:true,blocos:[],criado:now,criadoPor:QUEM,atualizado:now};
     if(vt==="dep")nc.dep=vc;if(vt==="acomp")nc.acomp=vc;
-    const nid2=dono+"-"+nid();DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");
+    const nid2=dono+"-"+nid();if(nc.pj){nc.num=maxNum(nc.pj)+1;const P=S.projetos[nc.pj]||{};const k=chaveEt(P,nc);nc.ord=doPj(nc.pj).filter(([,x])=>chaveEt(P,x)===k).reduce((m,[,x])=>Math.max(m,ordDe(x)),0)+1}DB.set("cards",nid2,nc);logMov(nid2,nc,"novo",dest==="sprint"?"prev":"backlog",dest==="sprint"?(nc.plan?"planejada":"fora da planning"):"no backlog");
     fechar();if(dest==="sprint"){SEL=nid2;render();toast("Agora toque na grade pra encaixar")}return}
   case "trazer":{if(!precisa())return;const sp=sprint();if(!sp)return;DB.set("cards",id,{sprint:S.cfg.sprint,estado:"prev",plan:!sp.fechado,blocos:[],atualizado:Date.now()});logMov(id,c,"backlog","prev","trazida do backlog");
     if(!$("veu").hidden)fechar();SEL=id;toast("Na sprint. Encaixe na grade em Minha sprint.");return}

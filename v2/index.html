@@ -80,6 +80,11 @@ details.rbk{border:1px solid var(--line);border-radius:12px;padding:.5em .8em;ma
 details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}details.rbk>summary .lnk{margin-left:auto;font-size:.8em}
 .rch{font-size:.72em;font-weight:700;border-radius:99px;padding:.1em .55em;background:#f1f5f9;color:var(--muted)}.rch.and{background:#fff4d6;color:#8a5a00}.rch.prz{background:#fde2e2;color:#a12a2a}.rch.etp{background:#eef2ff;color:#3b4fa3}
 .rbp{margin:.5em 0 .2em}.rbpt{font-size:.72em;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:.25em}.rbkm>summary{cursor:pointer;font-weight:700;color:var(--muted);margin:.4em 0}
+.sbk{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,24em),1fr));gap:.7em;margin:.3em 0 .7em}
+.sbg{border:1px solid var(--line);border-radius:12px;padding:.5em .6em;background:var(--paper);display:flex;flex-direction:column;gap:.35em}.sbgh{display:flex;justify-content:space-between;align-items:baseline;gap:.5em}.sbgh b{color:var(--blue2)}.sbgh .ct{font-size:.75em}
+.sbi{display:flex;gap:.3em;align-items:stretch}.sbm{flex:1;min-width:0;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:9px;padding:.3em .55em;font:inherit;font-size:.86em;display:flex;flex-direction:column;gap:.1em}button.sbm{cursor:pointer}button.sbm:hover{border-color:var(--blue)}
+.sbi.on .sbm{border-color:var(--orange);background:var(--orangeL)}.sbi.conc .sbm{opacity:.5}.sbi.conc .sbt{text-decoration:line-through}.sbm small{color:var(--muted);font-size:.82em}
+.prt{align-self:flex-start;font-size:.7em;font-weight:800;border-radius:6px;padding:0 .4em;text-transform:uppercase;letter-spacing:.03em}.prt.urg{background:#fde2e2;color:#a12a2a}.prt.imp{background:#fff1dc;color:#9a4b00}.prt.med{background:#e7efff;color:#2c4ea0}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -954,11 +959,30 @@ function backRaia(p,pode){const sp=sprint();const fimSp=sp?sp.fim:addDias(HOJE,1
   return '<div class="pbox"><h2>Backlog para puxar</h2><p class="hint" style="margin:0 0 .6em">Ações em aberto em que '+(p===MEU?"você é responsável ou participa":esc(nome(p))+" é responsável ou participa")+', e as dos projetos que '+(p===MEU?"você coordena":"coordena")+'. Entram: em andamento, início até '+dm(fimSp)+', prazo até '+dm(fimProx)+' (fim da próxima sprint) e as próximas da etapa em curso.</p>'+
     (blocos.length?blocos.map(bloco).join(""):'<div class="empty">Nada pede atenção nesta sprint.</div>')+
     (nDep?'<details class="rbkm"><summary>Mais adiante ('+nDep+')</summary>'+Object.entries(depois).sort((a,b)=>nomeK(a[0]).localeCompare(nomeK(b[0]),"pt")).map(([k,L])=>'<div class="rbp"><div class="rbpt">'+esc(nomeK(k))+'</div><div class="lista">'+L.map(([id,c])=>[posBk(k,id),id,c]).sort((x,y)=>x[0].localeCompare(y[0],"pt",{numeric:true})).map(([,id,c])=>linha(k,id,c)).join("")+'</div></div>').join("")+'</details>':'')+'</div>'}
+/* Sprint Backlog da pessoa: ações desta sprint por projeto, ordenadas por prioridade e prazo; clicar seleciona pra encaixar na grade */
+function sprintBk(p,pode){const L=cardsSprint().filter(([,c])=>ehDe(c,p)&&!c.rec);const rec=cardsSprint().filter(([,c])=>ehDe(c,p)&&c.rec);
+  const ord=(a,b)=>(priDe(a[1])-priDe(b[1]))||((a[1].fim||"9999").localeCompare(b[1].fim||"9999"))||(ordDe(a[1])-ordDe(b[1]));
+  const por={};L.forEach(x=>{const k=pjDoCard(x[1])||"__sem";(por[k]=por[k]||[]).push(x)});
+  const nomeK=k=>k==="__sem"?"Sem projeto":(pjObj(k)||{}).nome||"Sem projeto";
+  const ab=xs=>xs.filter(([,c])=>c.estado!=="conc");
+  const grupos=Object.entries(por).map(([k,xs])=>({k,xs,pri:Math.min(5,...ab(xs).map(([,c])=>priDe(c))),prz:ab(xs).map(([,c])=>c.fim).filter(Boolean).sort()[0]||"9999",vt:k===INT||k==="__sem"}))
+    .sort((a,b)=>(a.vt-b.vt)||(a.pri-b.pri)||a.prz.localeCompare(b.prz)||nomeK(a.k).localeCompare(nomeK(b.k),"pt"));
+  const PRC={1:"urg",2:"imp",3:"med"};
+  const linha=([id,c])=>{const k=pjDoCard(c)||"__sem";const esf=+c.esf||0,na=(c.blocos||[]).length,falta=Math.max(0,(esf||1)-na);const conc=c.estado==="conc";const pr=priDe(c);
+    const grade=conc?"":na&&!falta?"encaixada":na?"na grade "+na+"/"+(esf||1)+"h":esf?"falta "+esf+"h":"esforço a definir";
+    const sel=!conc&&falta>0&&pode&&podeMexer(c);const tag=sel?'button data-sel="'+id+'"':'span';
+    return '<div class="sbi'+(conc?' conc':'')+(SEL===id?' on':'')+'"><'+tag+' class="sbm">'+(pr<4?'<span class="prt '+PRC[pr]+'">'+PRIS[pr-1][1]+'</span>':'')+
+      '<span class="sbt">'+(k!=="__sem"&&posBk(k,id)?'<span class="bkn">'+posBk(k,id)+'</span> ':'')+esc(c.t)+'</span><small>'+[c.dono!==p?"de "+nome(c.dono):"",STATX[statusDe(c)],c.fim?(c.fim<HOJE&&!conc?"⚠ prazo vencido "+dm(c.fim):"prazo "+dm(c.fim)):"",grade].filter(Boolean).map(esc).join(" · ")+'</small></'+(sel?'button':'span')+'>'+
+      (podeMexer(c)?'<button class="btn sm" data-a="menu" data-id="'+id+'" title="Opções da ação">⋯</button>':'')+'</div>'};
+  const nFalta=L.filter(([,c])=>c.estado!=="conc"&&(+c.esf||1)>(c.blocos||[]).length).length;
+  return '<div class="sub2">Sprint Backlog <small class="ct">'+L.length+' ação(ões)'+(nFalta?' · '+nFalta+' pra encaixar na grade':' · tudo encaixado')+(rec.length?' · '+rec.length+' recorrente(s)':'')+'</small></div>'+
+    (L.length?'<div class="sbk">'+grupos.map(g=>{const xs=g.xs.slice().sort(ord);const a=xs.filter(([,c])=>c.estado!=="conc"),cc=xs.filter(([,c])=>c.estado==="conc");
+      return '<div class="sbg"><div class="sbgh"><b>'+esc(nomeK(g.k))+'</b><span class="ct">'+a.length+' em aberto'+(cc.length?' · '+cc.length+' concluída(s)':'')+'</span></div>'+a.map(linha).join("")+cc.map(linha).join("")+'</div>'}).join("")+'</div>':'<p class="empty">Nenhuma ação nesta sprint ainda. Traga do backlog abaixo ou crie em "+ nova ação".</p>')}
 function drawMinhaSprint(p){const sp=sprint();const C=capS(p);const pode=podeRaia(p);
   let h='<div class="pbox"><h2>Minha sprint</h2><div class="nums"><div><b>'+C.total+'h</b><span>na sprint</span></div><div><b>'+fh(C.rit)+'h</b><span>ritos da equipe</span></div><div><b>'+C.comp+'h</b><span>compromissos fixos</span></div><div><b>'+fh(C.meta)+'h</b><span>pra ações</span></div>'+
     '<div class="'+(C.pl>C.meta?"no":"ok")+'"><b>'+(C.pl)+'h</b><span>planejadas</span></div><div><b>'+C.reserva+'h</b><span>reserva pra imprevistos</span></div><div class="'+(C.folga?"no":"ok")+'"><b>'+C.folga+'h</b><span>folga sem registro</span></div></div>';
   if(C.folga&&pode)h+='<p class="hint" style="margin:0 0 .6em">Sobrou tempo além da reserva. Registre uma ação de melhoria contínua ou capacitação. <button class="btn sm" data-a="novaacao" data-p="'+esc(p)+'" data-tipo="mel">+ melhoria ou capacitação</button></p>';
-  h+='<div class="sub2">Para encaixar na grade</div><div class="encaixar">'+(C.semLugar.length?C.semLugar.map(([id,c])=>'<button data-sel="'+id+'" class="'+(SEL===id?"on":"")+'">'+esc(c.t)+'<small>falta '+((+c.esf||1)-(c.blocos||[]).length)+'h · '+esc(projNome(c)||"sem projeto")+'</small></button>').join(""):'<span class="empty">Tudo encaixado.</span>')+'</div>'+
+  h+=sprintBk(p,pode)+
     '<p class="hint" style="margin:0 0 .4em">'+(SEL?'Agora toque na parte do dia onde ela começa.':'Escolha uma ação acima e toque na grade.')+' Na grade: clique numa ação pra ver os detalhes, arraste pra mudar de lugar ou pra fora da grade pra tirar.</p>'+gradeHtml(p)+
     (pode?'<div class="dacts"><button class="btn" data-a="novocomp" data-p="'+esc(p)+'">+ compromisso fixo</button><button class="btn pri" data-a="novaacao" data-p="'+esc(p)+'">+ nova ação</button></div>':'')+'</div>';
   h+=backRaia(p,pode);

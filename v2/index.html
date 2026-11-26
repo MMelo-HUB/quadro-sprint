@@ -573,7 +573,7 @@ const iniDe=p=>{const x=pessoa(p);return Math.max(0,Math.min(NPT-1,+(x&&x.hini)|
 /* sem horário fixo: todos os turnos ficam disponíveis pra todo mundo */const trabalha=(p,pt)=>true;
 const todosTrabalham=(parts,pt)=>parts.every(x=>trabalha(x,pt));
 let TURF={};try{TURF=JSON.parse(localStorage.getItem("q2-tur")||"{}")}catch(e){}
-const turnoFechado=(p,t)=>{if(t===1)return false;const k=p+"|"+t;return k in TURF?TURF[k]:false};
+const turnoFechado=(p,t)=>{const k=p+"|"+t;return k in TURF?TURF[k]:false};
 const podeRaia=p=>{if(LEITURA)return false;if(ADMIN||MEU===p)return true;const x=pessoa(p);return !!(x&&x.bol&&x.resp===MEU)};
 const sprint=()=>S.sprints[S.cfg.sprint]||null;
 function toast(t,ms){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,ms||2600)}
@@ -905,7 +905,7 @@ function gradeHtml(p){const dias=diasSp();const m=ocup(p);const mk=ritoMarcas(p)
     if(pt%4===0){if(t>0)h+='<tr class="sep"><td colspan="'+(dias.length+1)+'"></td></tr>';
       if(turnoFechado(p,t)){const ids=new Set();dias.forEach(d=>{for(let j=pt;j<pt+4;j++){const v=m[d+"#"+j];if(v&&v.k!=="rito")ids.add(v.id)}});
         h+='<tr class="tfech"><th class="t">'+TURNOS[t]+'</th><td colspan="'+dias.length+'"><button class="tbar" data-tur="'+esc(p)+'|'+t+'">▸ '+TURNOS[t]+' minimizada'+(ids.size?' · '+ids.size+' item(ns) aqui':'')+' · clique pra abrir</button></td></tr>';pt+=3;continue}}
-    h+='<tr><th class="t">'+(pt%4===0?TURNOS[t]+'<small class="thora">'+slotHora(pt)+'</small>'+(t!==1?'<button class="tmin" data-tur="'+esc(p)+'|'+t+'" title="Minimizar">–</button>':''):'')+'</th>'+dias.map(d=>{const k=d+"#"+pt,v=m[k];const hj=d===HOJE?" hj":"";
+    h+='<tr><th class="t">'+(pt%4===0?TURNOS[t]+'<small class="thora">'+slotHora(pt)+'</small>'+'<button class="tmin" data-tur="'+esc(p)+'|'+t+'" title="Minimizar">–</button>':'')+'</th>'+dias.map(d=>{const k=d+"#"+pt,v=m[k];const hj=d===HOJE?" hj":"";
       if(!v&&!trabalha(p,pt))return '<td class="fora'+hj+'" data-k="'+k+'" data-n="1" title="Fora do horário de trabalho">'+cx(1,mkh(k))+'</td>';
       if(!v)return '<td class="vazio'+hj+(mk[k]?" commk":"")+'" data-k="'+k+'" data-n="1" data-g="'+k+'" data-gp="'+esc(p)+'">'+cx(1,mkh(k))+'</td>';
       const ant=pt%4?m[d+"#"+(pt-1)]:null;if(ant&&ant.id===v.id)return "";

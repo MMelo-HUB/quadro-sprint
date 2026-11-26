@@ -1183,8 +1183,8 @@ function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;cons
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n),i]);
   const outros=todas.filter(([,c])=>!ets.includes(c.etp));if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span>'+esc(c.t)+'<small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt"><span class="eapst '+k+'">'+tx+'</span>'+
-    (pode&&sprint()&&k==="back"?'<button class="btn sm pri" data-a="trazer" data-id="'+cid+'">Pra sprint</button>':'')+
+  const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span>'+esc(c.t)+'<small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+    
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button><button class="btn sm no" data-a="bkdel" data-id="'+cid+'" data-bk="'+id+'" title="Excluir esta ação">✕</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
    (todas.length||ets.length?grupos.map(([n,cs,i])=>{const feitas=cs.filter(([,c])=>c.estado==="conc").length;const atual=i===(P.etapa||0);

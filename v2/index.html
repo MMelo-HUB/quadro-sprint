@@ -45,6 +45,25 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 .lr .ln::before{counter-increment:ln;content:counter(ln)".";font-weight:700;color:var(--muted)}.lr input{min-width:0;width:100%}.lr input[type=radio]{width:auto}.latual{display:flex;justify-content:center}
 .ll+.btn{align-self:flex-start}.lh:has(+.ll:empty){display:none}
 @media(max-width:640px){.lh-ets,.ll-ets .lr{grid-template-columns:22px 30px minmax(0,1fr) 32px 32px}.ll-ets .l2,.ll-ets .l3{grid-column:3}.lh-ets span:nth-child(n+4){display:none}}
+.mini{margin:.35em 0 .2em}.mpas{display:flex;align-items:center}.mp{flex:none}.mp b{display:inline-flex;align-items:center;justify-content:center;width:1.9em;height:1.9em;border-radius:99px;border:2px solid var(--line);background:var(--paper);font-size:.72em;font-weight:800;color:var(--muted)}
+.mp.ok b{background:var(--ok);border-color:var(--ok);color:#fff}.mp.agora b{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 0 0 3px var(--orangeL)}.ml{flex:1;height:2px;background:var(--line);min-width:.6em}.mp.ok+.ml{background:var(--ok)}
+.mnow{font-size:.8em;color:var(--muted);margin-top:.3em}.mnow b{color:var(--ink)}
+.gant{display:flex;flex-direction:column;gap:.3em;margin:.3em 0 .2em}
+.gr{display:grid;grid-template-columns:minmax(9em,15em) minmax(0,1fr) 7.5em;gap:.7em;align-items:center}
+.gn{font-weight:600;font-size:.86em;line-height:1.2}.gd{font-size:.78em;color:var(--muted);white-space:nowrap}
+.gt{position:relative;height:1.6em;background:var(--bg);border-radius:6px}
+.gcab .gt{background:none;height:1.5em}.gcab .gt span{position:absolute;bottom:0;transform:translateX(-50%);font-size:.7em;color:var(--muted);white-space:nowrap}
+.gcab .hj{position:absolute;top:-.2em;transform:translateX(-50%);font-size:.66em;font-weight:800;font-style:normal;color:#fff;background:#c99700;border-radius:99px;padding:0 .5em;z-index:2}
+.gl{position:absolute;top:0;bottom:0;width:1px;background:rgba(100,116,139,.13)}.gl.ano{background:rgba(100,116,139,.35)}
+.gh{position:absolute;top:-.2em;bottom:-.2em;width:2px;margin-left:-1px;background:#c99700;z-index:2}
+.gp{position:absolute;top:-.2em;bottom:-.2em;width:0;border-left:2px dashed var(--blue);z-index:2}
+.gb{position:absolute;top:.25em;bottom:.25em;border-radius:5px;z-index:1}.gb.ok{background:var(--ok)}.gb.agora{background:var(--blue)}.gb.fut{background:rgba(37,99,235,.08);border:2px dashed var(--blue)}
+.gmk .gt{background:none;border-top:1px dashed var(--line)}
+.gm{position:absolute;transform:translateX(-50%);font-size:.66em;font-weight:800;color:#fff;background:var(--no);border-radius:4px;padding:.1em .4em;z-index:3;white-space:nowrap;cursor:default}.gm.pass{background:#94a3b8}
+.gm.inl{position:static;transform:none;display:inline-block}tr.mpass td{color:var(--muted)}
+.gleg{display:flex;gap:1.2em;flex-wrap:wrap;font-size:.74em;color:var(--muted);margin:.1em 0 .6em}.gleg span{display:flex;align-items:center;gap:.4em}.gleg i{display:inline-block;width:14px;height:0;border-top:2px solid}
+.gleg .lh{border-color:#c99700}.gleg .lp{border-top:2px dashed var(--blue)}.gleg .lm{width:10px;height:10px;border:0;background:var(--no);border-radius:2px}
+@media(max-width:640px){.gr{grid-template-columns:7em minmax(0,1fr)}.gd{display:none}}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -989,7 +1008,9 @@ function drawPainel(){const sp=sprint();if(!sp)return '<div class="empty">Cadast
   return h}
 
 /* ================= projetos ================= */
-function etapasHtml(P){const e=P.etapas||[];if(!e.length)return '';const a=P.etapa||0;return '<div class="etapas">'+e.map((x,i)=>'<span class="'+(i<a?"feita":i===a?"atual":"")+'">'+esc(x)+'</span>').join("")+'</div>'}
+function etapasHtml(P){const e=P.etapas||[];if(!e.length)return '';const a=P.etapa||0;const cr=P.cron||[];
+  return '<div class="mini"><div class="mpas">'+e.map((x,i)=>{const c=cr[i]||{};const k=i<a?"ok":i===a?"agora":"";return '<span class="mp '+k+'" title="'+(i+1)+'. '+esc(x)+(c.ini&&c.fim?' ('+dm(c.ini)+' a '+dm(c.fim)+')':'')+'"><b>'+(k==="ok"?"✓":i+1)+'</b></span>'}).join('<i class="ml"></i>')+'</div>'+
+  '<div class="mnow">Etapa atual: <b>'+(a+1)+'. '+esc(e[a]||"")+'</b></div></div>'}
 const etapasAt=(P,a)=>(a.etapas&&a.etapas.length?a.etapas:(P.modeloAt||[]));
 const atConcluido=(P,a)=>{const et=etapasAt(P,a);return et.length>0&&(a.etapa||0)>=et.length};
 function statusAt(pid,a){const cs=cardsSprint().filter(([,c])=>c.pj===pid&&c.at===a.id);if(atConcluido(S.projetos[pid],a))return ["ok","concluído"];
@@ -1006,20 +1027,30 @@ function cronHtml(P,a){const et=etapasAt(P,a);const cr=a.cron||[];const at=a.eta
 /* gráfico de barras no tempo: linhas {l (html), ini, fim, k ok|agora|fut, dd}, com hoje, marcos e previsão */
 function ganttHtml(rows,marcosP,pv,tit){
   const datas=[HOJE];rows.forEach(x=>{if(x.ini)datas.push(x.ini);if(x.fim)datas.push(x.fim)});
-  if(datas.length<3)return "";if(pv)datas.push(pv);const metas=(marcosP||[]).map(m=>m.data);const P={marcos:marcosP||[]};
-  let ini=datas.slice().sort()[0],fim=datas.slice().sort().pop();metas.forEach(d=>{if(d>=ini&&d<=addDias(fim,21))fim=d>fim?d:fim});
-  ini=addDias(ini,-((dow(ini)+6)%7));fim=addDias(fim,3);const t0=meioDia(ini).getTime(),t1=meioDia(fim).getTime();const x=d=>Math.max(0,Math.min(100,(meioDia(d).getTime()-t0)/(t1-t0)*100));
-  const semanas=[];for(let d=ini;d<=fim;d=addDias(d,7))semanas.push(d);
-  const marks=[[HOJE,"hoje","hoje"]];(P.marcos||[]).forEach(m=>{if(m.data>=ini&&m.data<=fim)marks.push([m.data,"meta",esc(m.t.length>28?m.t.slice(0,26)+"…":m.t)+" "+dm(m.data)])});
-  if(pv)marks.push([pv,"prev","previsão "+dm(pv)]);
-  const riscos=marks.map(([d,c])=>'<span class="cv '+c+'" style="left:'+x(d)+'%"></span>').join("");
-  const lin=marks.map(([d,c,r],i)=>'<span class="cv '+c+'" style="left:'+x(d)+'%;bottom:auto;height:'+(i*1.15+.6)+'em"></span><span class="cvl '+c+(x(d)>70?" esq":"")+'" style="left:'+x(d)+'%;top:'+(i*1.15)+'em">'+r+'</span>');
-  return '<div class="sub2">'+tit+'</div><div class="cron"><div class="cr"><span></span><div class="trk sem">'+semanas.map(d=>'<span style="left:'+x(d)+'%">'+dm(d)+'</span>').join("")+'</div><span></span></div>'+
-    rows.map(c=>{let bar="";
-      if(c.ini&&c.fim){const l=x(c.ini),w=Math.max(1.2,x(addDias(c.fim,1))-l);bar='<i class="bar '+c.k+'" style="left:'+l+'%;width:'+w+'%"></i>'}
-      return '<div class="cr"><span class="en">'+c.l+'</span><div class="trk">'+bar+riscos+'</div><span class="dd">'+c.dd+'</span></div>'}).join("")+
-    '<div class="cr lin"><span></span><div class="trk" style="height:'+(marks.length*1.15+.4)+'em">'+lin.join("")+'</div><span></span></div></div>'}
-/* ficha do atendimento: o "status report" de um atendido, montado a partir do que a equipe registra */
+  if(datas.length<3)return "";if(pv)datas.push(pv);const ms=(marcosP||[]).slice().sort((a,b)=>a.data<b.data?-1:1);ms.forEach(m=>datas.push(m.data));
+  const ord=datas.slice().sort();let ini=ord[0],fim=ord[ord.length-1];
+  const span=(meioDia(fim)-meioDia(ini))/86400000;
+  // escala: semanas (até ~4 meses), meses (até ~14 meses) ou trimestres
+  const modo=span<=120?"sem":span<=430?"mes":"tri";
+  if(modo==="sem"){ini=addDias(ini,-((dow(ini)+6)%7));fim=addDias(fim,7)}else{ini=ini.slice(0,8)+"01";const d=new Date(fim.slice(0,7)+"-15T12:00:00");d.setMonth(d.getMonth()+1);fim=d.toISOString().slice(0,8)+"01"}
+  const t0=meioDia(ini).getTime(),t1=meioDia(fim).getTime();const x=d=>Math.max(0,Math.min(100,(meioDia(d).getTime()-t0)/(t1-t0)*100));
+  const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const ticks=[];if(modo==="sem"){for(let d=ini;d<fim;d=addDias(d,7))ticks.push([d,dm(d),false])}
+  else{let d=new Date(ini+"T12:00:00");while(d.toISOString().slice(0,10)<fim){const iso=d.toISOString().slice(0,10);const m=d.getMonth();const rot=modo==="mes"||m%3===0;ticks.push([iso,rot?MES[m]+(m===0||ticks.length===0?"/"+String(d.getFullYear()).slice(2):""):"",m===0]);d.setMonth(m+1)}}
+  const grade=ticks.map(([d,,ano])=>'<i class="gl'+(ano?' ano':'')+'" style="left:'+x(d)+'%"></i>').join("");
+  const hojeL=HOJE>=ini&&HOJE<=fim?'<i class="gh" style="left:'+x(HOJE)+'%"></i>':'';
+  const prevL=pv&&pv>=ini&&pv<=fim?'<i class="gp" style="left:'+x(pv)+'%"></i>':'';
+  // marcos: losangos numerados numa faixa própria, empilhando os que ficam perto
+  const niv=[];const mk=ms.filter(m=>m.data>=ini&&m.data<=fim).map(m=>{const p=x(m.data);let n=0;while(niv[n]!=null&&p-niv[n]<4)n++;niv[n]=p;return {p,n,i:ms.indexOf(m)+1,m}});
+  const nN=Math.max(1,niv.length);
+  const cab='<div class="gr gcab"><span></span><div class="gt">'+ticks.filter(t=>t[1]).map(([d,r])=>'<span style="left:'+x(d)+'%">'+r+'</span>').join("")+
+    (hojeL?'<em class="hj" style="left:'+x(HOJE)+'%">hoje</em>':'')+'</div><span></span></div>';
+  const linhas=rows.map(c=>{let bar="";if(c.ini&&c.fim){const l=x(c.ini),w=Math.max(.8,x(addDias(c.fim,1))-l);bar='<b class="gb '+c.k+'" style="left:'+l+'%;width:'+w+'%"></b>'}
+    return '<div class="gr"><span class="gn">'+c.l+'</span><div class="gt">'+grade+hojeL+prevL+bar+'</div><span class="gd">'+c.dd+'</span></div>'}).join("");
+  const faixa=mk.length?'<div class="gr gmk"><span class="gn"><b>Marcos</b></span><div class="gt" style="height:'+(nN*1.55+.3)+'em">'+grade+hojeL+prevL+mk.map(o=>'<span class="gm'+(o.m.data<HOJE?" pass":"")+'" style="left:'+o.p+'%;top:'+(o.n*1.55+.25)+'em" title="M'+o.i+' · '+esc(o.m.t)+' · '+dm(o.m.data)+'">M'+o.i+'</span>').join("")+'</div><span></span></div>':'';
+  const rodape=pv?'<div class="gleg"><span><i class="lh"></i>hoje</span><span><i class="lp"></i>fim previsto '+dm(pv)+'</span>'+(mk.length?'<span><i class="lm"></i>marco (Mn = número na lista)</span>':'')+'</div>':'<div class="gleg"><span><i class="lh"></i>hoje</span>'+(mk.length?'<span><i class="lm"></i>marco</span>':'')+'</div>';
+  return '<div class="sub2">'+tit+'</div><div class="gant">'+cab+linhas+faixa+'</div>'+rodape}
+
 function respAt(pid,a){if(a.resp)return a.resp;const cont={};Object.values(S.cards).forEach(c=>{if(c&&!c.apagado&&c.pj===pid&&c.at===a.id)cont[c.dono]=(cont[c.dono]||0)+1});const o=Object.entries(cont).sort((x,y)=>y[1]-x[1])[0];return o?o[0]:null}
 function gFicha(pid,aid){const P=S.projetos[pid];const a=atDe(P,aid);if(!a)return;const et=etapasAt(P,a);const at=a.etapa||0;const conc=atConcluido(P,a);const st=statusAt(pid,a);
   const cs=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===pid&&c.at===aid);const abertas=cs.filter(([,c])=>c.estado!=="conc"&&c.sprint);
@@ -1085,14 +1116,14 @@ function gFichaPj(pid){const P=S.projetos[pid];if(!P)return;const et=P.etapas||[
   const back=cs.filter(([,c])=>!c.sprint&&c.estado!=="conc").length;
   const pode=ADMIN||P.dono===MEU;
   abrir('<div class="ficha"><div class="fh2"><div><div class="kick2">'+(P.tipo==="servico"?"Serviço":"Projeto")+(P.cliente?' · '+esc(P.cliente):'')+'</div><h2 style="font-size:2em">'+esc(P.nome)+'</h2>'+
-     '<div class="ct">Responsável: <b>'+esc(nome(P.dono)||"—")+'</b>'+(bols.length?' · bolsistas: '+esc(bols.map(b=>b.n).join(", ")):'')+(metas.length?' · '+metas.map(m=>esc(m.t)+": "+dm(m.data)).join(" · "):'')+'</div></div>'+
+     '<div class="ct">Responsável: <b>'+esc(nome(P.dono)||"—")+'</b>'+(bols.length?' · bolsistas: '+esc(bols.map(b=>b.n).join(", ")):'')+'</div></div>'+
      '<div class="prevbox"><span class="stt '+st[0]+'">'+st[1]+'</span><b>'+esc(pv?fDia(pv):pm?fDia(pm.data):"—")+'</b><small>'+(pv?(fimEt?"previsão de conclusão":"previsão dos atendimentos"):pm?"próximo marco":"sem previsão")+'</small></div></div>'+
    '<div class="sub2">Etapas</div>'+trilha+ganttEt+leitura+ganttAt+(tabAt?'<div class="sub2">Atendimentos</div>'+tabAt:'')+
    '<div class="grid2" style="margin-top:.8em"><div><div class="sub2">Situação atual</div><p>'+(P.sit?esc(P.sit):'<span class="empty">Sem descrição. '+(pode?'Use "Editar" pra escrever em que ponto está.':'')+'</span>')+'</p>'+
      (atencao.length?'<div class="sub2" style="color:var(--no)">Pontos de atenção</div><ul class="ful">'+atencao.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>':'')+'</div>'+
    '<div><div class="sub2">Próximos passos</div>'+(passos.length?'<ul class="ful">'+passos.map(([,c])=>{const an=c.at?(ats.find(a=>a.id===c.at)||{}).n:"";return '<li><b>'+esc(primeiro(c)?fDia(primeiro(c)):"sem data")+'</b> · '+(an?esc(an)+': ':'')+esc(c.t)+' <small>('+esc(nome(c.dono))+' · '+EST[c.estado]+')</small></li>'}).join("")+'</ul>'+(abertas.length>10?'<p class="ct">e mais '+(abertas.length-10)+' ação(ões) em aberto.</p>':''):'<p class="empty">Nenhuma ação em aberto nesta sprint.</p>')+'</div></div>'+
    '<div class="grid2"><div><div class="sub2">Nesta sprint</div><p>'+spc.filter(([,c])=>c.estado==="conc").length+' de '+spc.length+' ações concluídas · '+hrsC+'h de '+hrs+'h'+(quem.length?'<br><small class="ct">Quem está no projeto: '+esc(quem.join(", "))+'</small>':'')+'<br><small class="ct">'+back+' ação(ões) no backlog</small></p>'+porEt+'</div>'+
-   '<div><div class="sub2">Marcos do projeto</div>'+(metas.length?'<table class="capt">'+metas.map(m=>'<tr><td>'+(m.data<=HOJE?"✓":"")+'</td><td>'+esc(m.t)+'</td><td style="text-align:right;white-space:nowrap">'+dm(m.data)+'</td></tr>').join("")+'</table>':'<p class="empty">Nenhum marco.</p>')+'</div></div>'+
+   '<div><div class="sub2">Marcos do projeto</div>'+(metas.length?'<table class="capt">'+metas.map((m,mi)=>'<tr'+(m.data<HOJE?' class="mpass"':'')+'><td><span class="gm inl'+(m.data<HOJE?" pass":"")+'">M'+(mi+1)+'</span></td><td>'+esc(m.t)+'</td><td style="text-align:right;white-space:nowrap">'+dm(m.data)+'</td></tr>').join("")+'</table>':'<p class="empty">Nenhum marco.</p>')+'</div></div>'+
    '<div class="bts"><button class="btn esq" data-a="pjback" data-id="'+pid+'">Backlog</button>'+(pode?'<button class="btn" data-a="pjedit" data-id="'+pid+'">Editar</button>':'')+'<button class="btn pri" data-a="fechar">Fechar</button></div></div>',"larga")}
 function gAt(pid,aid){const P=S.projetos[pid];const a=atDe(P,aid);const et=etapasAt(P,a);
   abrir('<h2>'+esc(P.nome)+' › '+esc(a.n)+'</h2>'+

@@ -32,6 +32,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .sync[data-k=ok]::before{content:"● ";color:var(--ok)}
 .sync[data-k=warn]{color:var(--no)}
 .btn{border:1.5px solid var(--line);background:var(--paper);color:var(--blue2);border-radius:9px;padding:.4em .9em;font-weight:600}
+.etl{display:flex;flex-direction:column;gap:6px;margin:.3em 0 .5em;counter-reset:et}.etr{display:flex;gap:6px;align-items:center}.etr .etn::before{counter-increment:et;content:counter(et)".";font-weight:700;color:var(--muted);min-width:1.4em;display:inline-block}.etr .etnm{flex:1;min-width:0}.etr input[type=date]{width:auto}.etl:empty::after{content:"Nenhuma etapa ainda.";font-size:.85em;color:var(--muted)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -1100,18 +1101,24 @@ function drawProj(){const pjs=Object.entries(S.projetos).filter(([,x])=>x&&x.ati
     return '<div class="pj"><h3><button class="lnk" data-a="fichapj" data-id="'+id+'" title="Ver a ficha do projeto">'+esc(P.nome)+'</button> <small>'+(P.tipo==="servico"?"serviço":"projeto")+'</small></h3><div class="q">Responsável: <b>'+esc(nome(P.dono)||"—")+'</b>'+(P.cliente?' · contratante: '+esc(P.cliente):'')+(nbol.length?' · bolsistas: '+esc(nbol.map(b=>b.n).join(", ")):'')+'</div>'+etapasHtml(P)+
       '<div class="q">'+(pm?'Próximo marco do projeto: <b>'+esc(pm.t)+'</b> · '+fDia(pm.data):'Sem marco futuro do projeto')+'</div>'+atendidosHtml(id,P,pode)+'<div class="q">'+nasp.length+' ações nesta sprint · '+back+' no backlog · '+nrec+' recorrente(s)</div>'+
       '<div class="dacts" style="margin-top:.3em"><button class="btn sm pri" data-a="fichapj" data-id="'+id+'">Ficha</button><button class="btn sm" data-a="pjback" data-id="'+id+'">Backlog</button><button class="btn sm" data-a="reclist" data-id="'+id+'">Recorrentes</button>'+(pode?'<button class="btn sm" data-a="pjedit" data-id="'+id+'">Editar</button>':'')+'</div></div>'}).join("")+'</div>'}
-function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas:[],marcos:[],etapa:0};
-  abrir('<h2>'+(id?"Editar":"Novo projeto ou serviço")+'</h2><div class="duas"><div><label class="f"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'"></label>'+
+/* linha de etapa: nome (+ início e fim na edição); o = índice antigo, pra manter cronograma e ações */
+function etpLinha(nomeE,o,c,comDatas){return '<div class="etr" data-o="'+(o==null?"":o)+'"><span class="etn"></span><input class="etnm" value="'+esc(nomeE||"")+'" placeholder="Nome da etapa">'+
+  (comDatas?'<input type="date" class="eti" value="'+esc((c&&c.ini)||"")+'" title="Início"><input type="date" class="etf" value="'+esc((c&&c.fim)||"")+'" title="Fim">':'')+
+  '<button class="btn sm" data-a="pjetsobe" title="Subir">↑</button><button class="btn sm no" data-a="pjetdel" title="Tirar esta etapa">✕</button></div>'}
+function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas:[],marcos:[],etapa:0};const ed=!!id;
+  const ets='<div class="f"><span style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Etapas do projeto</span>'+(ed?'<small class="ct">Início e fim de cada etapa ao lado do nome.</small>':'')+'<div id="pjEts" class="etl'+(ed?' datas':'')+'">'+
+    (P.etapas||[]).map((e,i)=>etpLinha(e,i,(P.cron||[])[i],ed)).join("")+'</div><button class="btn sm" data-a="pjetadd" data-ed="'+(ed?1:0)+'" style="align-self:flex-start">+ etapa</button></div>';
+  const basico='<label class="f"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'"></label>'+
    '<div class="row"><label class="f">Tipo<select id="pjT">'+opts([["projeto","Projeto (tem fim)"],["servico","Serviço (contínuo)"]],P.tipo)+'</select></label><label class="f">Responsável<select id="pjD"><option value="">—</option>'+pessoasOpt(P.dono)+'</select></label></div>'+
-   '<label class="f">Contratante ou parceiro<input id="pjC" value="'+esc(P.cliente||"")+'" placeholder="Sebrae, Caixa…"></label>'+
+   '<label class="f">Contratante ou parceiro<input id="pjC" value="'+esc(P.cliente||"")+'" placeholder="Sebrae, Caixa…"></label>';
+  const bts='<div class="bts">'+(id&&ADMIN?'<button class="btn esq no" data-a="pjdel" data-id="'+id+'">Excluir</button><button class="btn" data-a="pjarq" data-id="'+id+'">Arquivar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="pjok" data-id="'+(id||"")+'">Salvar</button></div>';
+  if(!ed){abrir('<h2>Novo projeto ou serviço</h2>'+basico+ets+'<p class="ct">Situação, marcos, atendidos e cronograma você completa depois, em Editar.</p>'+bts);setTimeout(()=>{const n=$("pjN");if(n)n.focus()},50);return}
+  abrir('<h2>Editar</h2><div class="duas"><div>'+basico+
    '<label class="f">Situação atual<textarea id="pjS" rows="4" placeholder="Em que ponto o projeto está">'+esc(P.sit||"")+'</textarea></label>'+
-   '<label class="f">Marcos do projeto<textarea id="pjM" rows="3" placeholder="15/12 Prestação de contas parcial ao Sebrae">'+esc((P.marcos||[]).map(m=>dm(m.data)+(m.data.slice(0,4)!=="2026"?"/"+m.data.slice(0,4):"")+" "+m.t).join("\n"))+'</textarea></label></div><div>'+
-   '<label class="f">Etapas do projeto<textarea id="pjE" rows="4" placeholder="Execução com as empresas&#10;Prestação de contas parcial&#10;Prestação de contas final">'+esc((P.etapas||[]).join("\n"))+'</textarea></label>'+
-   ((P.etapas||[]).length?'<label class="f">Etapa atual do projeto<select id="pjA">'+opts(P.etapas.map((e,i)=>[i,e]),P.etapa||0)+'</select></label>':'')+
-   '<label class="f">Atendidos<textarea id="pjAt" rows="5" placeholder="Empresa A&#10;Empresa B&#10;Empresa C">'+esc((P.atendidos||[]).map(a=>a.n).join("\n"))+'</textarea></label>'+
-   '<label class="f">Etapas-modelo dos atendidos<textarea id="pjEM" rows="5" placeholder="Diagnóstico&#10;Modelagem&#10;Validação&#10;Encerramento">'+esc((P.modeloAt||[]).join("\n"))+'</textarea></label></div></div>'+
-   ((P.etapas||[]).length?'<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:.4em">Cronograma das etapas</div><table class="capt crtab"><thead><tr><th>Etapa</th><th>Início</th><th>Fim</th></tr></thead>'+P.etapas.map((e,i)=>{const c=(P.cron||[])[i]||{};return '<tr><td>'+(i+1)+'. '+esc(e)+'</td><td><input type="date" data-pci="'+i+'" value="'+esc(c.ini||"")+'" style="width:auto"></td><td><input type="date" data-pcf="'+i+'" value="'+esc(c.fim||"")+'" style="width:auto"></td></tr>'}).join("")+'</table>':'')+
-   '<div class="bts">'+(id&&ADMIN?'<button class="btn esq no" data-a="pjdel" data-id="'+id+'">Excluir</button><button class="btn" data-a="pjarq" data-id="'+id+'">Arquivar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="pjok" data-id="'+(id||"")+'">Salvar</button></div>',"media")}
+   '<label class="f">Marcos do projeto<textarea id="pjM" rows="3" placeholder="15/12 Prestação de contas parcial">'+esc((P.marcos||[]).map(m=>dm(m.data)+(m.data.slice(0,4)!=="2026"?"/"+m.data.slice(0,4):"")+" "+m.t).join("\n"))+'</textarea></label>'+
+   '<label class="f">Atendidos<textarea id="pjAt" rows="4" placeholder="Empresa A&#10;Empresa B">'+esc((P.atendidos||[]).map(a=>a.n).join("\n"))+'</textarea></label>'+
+   '<label class="f">Etapas-modelo dos atendidos<textarea id="pjEM" rows="4" placeholder="Diagnóstico&#10;Modelagem&#10;Validação">'+esc((P.modeloAt||[]).join("\n"))+'</textarea></label></div><div>'+
+   ets+((P.etapas||[]).length?'<label class="f">Etapa atual do projeto<select id="pjA">'+opts(P.etapas.map((e,i)=>[i,e]),P.etapa||0)+'</select></label>':'')+'</div></div>'+bts,"media")}
 function lerMarcos(txt){return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{const m=l.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?\s+(.+)$/);if(!m)return null;const mes=+m[2];const ano=m[3]?+m[3]:(mes<8?2027:2026);
   return {data:ano+"-"+String(mes).padStart(2,"0")+"-"+String(+m[1]).padStart(2,"0"),t:m[4]}}).filter(Boolean)}
 function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
@@ -1544,10 +1551,22 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "pjnovo":gProj(null);return;
   case "pjedit":gProj(id);return;
   case "pjback":gBacklog(id);return;
-  case "pjok":{const nm=$("pjN").value.trim();if(!nm){toast("Dê um nome.");return}const et=$("pjE").value.split("\n").map(x=>x.trim()).filter(Boolean);const pid=id||("pj-"+nid());
-    const velhos=(id&&S.projetos[id]&&S.projetos[id].atendidos)||[];const ats=$("pjAt").value.split("\n").map(x=>x.trim()).filter(Boolean).map(n=>velhos.find(a=>a.n.toLowerCase()===n.toLowerCase())||{id:"at-"+nid(),n,etapa:0,marcos:[]});
-    const o={nome:nm,tipo:$("pjT").value,dono:$("pjD").value||null,cliente:$("pjC").value.trim()||null,etapas:et,sit:$("pjS").value.trim()||null,cron:et.map((e,i)=>{const velhoI=(id&&S.projetos[id]&&S.projetos[id].etapas||[]).indexOf(e);const a=document.querySelector('[data-pci="'+velhoI+'"]'),b2=document.querySelector('[data-pcf="'+velhoI+'"]');const ini=a&&a.value||null;let fim=b2&&b2.value||null;if(ini&&fim&&fim<ini)fim=ini;return {ini,fim}}),marcos:lerMarcos($("pjM").value),atendidos:ats,modeloAt:$("pjEM").value.split("\n").map(x=>x.trim()).filter(Boolean),ativo:true};if($("pjA"))o.etapa=Math.min(+$("pjA").value,Math.max(0,et.length-1));else o.etapa=0;
-    DB.set("projetos",pid,o);fechar();return}
+  case "pjok":{const nm=$("pjN").value.trim();if(!nm){toast("Dê um nome.");return}const pid=id||("pj-"+nid());const V=id&&S.projetos[id]||{};
+    const rows=[...document.querySelectorAll("#pjEts .etr")].map(r=>({n:r.querySelector(".etnm").value.trim(),o:r.dataset.o===""?null:+r.dataset.o,i:r.querySelector(".eti"),f:r.querySelector(".etf")})).filter(r=>r.n);
+    const et=rows.map(r=>r.n);const cron=rows.map(r=>{const velho=r.o!=null?((V.cron||[])[r.o]||{}):{};let ini=r.i?(r.i.value||null):(velho.ini||null),fim=r.f?(r.f.value||null):(velho.fim||null);if(ini&&fim&&fim<ini)fim=ini;return {ini,fim}});
+    const val=k=>$(k)?$(k).value:null;
+    const o={nome:nm,tipo:$("pjT").value,dono:$("pjD").value||null,cliente:$("pjC").value.trim()||null,etapas:et,cron,ativo:true};
+    // ações que estavam numa etapa renomeada acompanham o novo nome
+    if(id)rows.forEach(r=>{if(r.o==null)return;const ant=(V.etapas||[])[r.o];if(ant&&ant!==r.n)Object.entries(S.cards).forEach(([cid,c])=>{if(c&&c.pj===id&&c.etp===ant)DB.set("cards",cid,{etp:r.n})})});
+    if(val("pjS")!==null)o.sit=val("pjS").trim()||null;
+    if(val("pjM")!==null)o.marcos=lerMarcos(val("pjM"));else if(!id)o.marcos=[];
+    if(val("pjAt")!==null){const velhos=V.atendidos||[];o.atendidos=val("pjAt").split("\n").map(x=>x.trim()).filter(Boolean).map(n=>velhos.find(a=>a.n.toLowerCase()===n.toLowerCase())||{id:"at-"+nid(),n,etapa:0,marcos:[]})}else if(!id)o.atendidos=[];
+    if(val("pjEM")!==null)o.modeloAt=val("pjEM").split("\n").map(x=>x.trim()).filter(Boolean);
+    if($("pjA")){const velhoA=+$("pjA").value;const novo=rows.findIndex(r=>r.o===velhoA);o.etapa=novo>=0?novo:Math.min(velhoA,Math.max(0,et.length-1))}else o.etapa=id?Math.min(V.etapa||0,Math.max(0,et.length-1)):0;
+    DB.set("projetos",pid,o);fechar();toast(id?"Projeto salvo":"Projeto criado");return}
+  case "pjetadd":{const L=$("pjEts");L.insertAdjacentHTML("beforeend",etpLinha("",null,null,b.dataset.ed==="1"));const ins=L.querySelectorAll(".etnm");ins[ins.length-1].focus();return}
+  case "pjetdel":{const r=b.closest(".etr");if(r)r.remove();return}
+  case "pjetsobe":{const r=b.closest(".etr");if(r&&r.previousElementSibling)r.parentNode.insertBefore(r,r.previousElementSibling);return}
   case "pjarq":DB.set("projetos",id,{ativo:false});fechar();toast("Projeto arquivado. Para ver ou reativar: Projetos → Arquivados.");return;
   case "impok":impGrava();return;
   case "pjarqlist":if(!ADMIN)return;gPjArq();return;

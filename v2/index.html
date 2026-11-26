@@ -85,6 +85,7 @@ details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}deta
 .sbi{display:flex;gap:.3em;align-items:stretch}.sbm{flex:1;min-width:0;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:9px;padding:.3em .55em;font:inherit;font-size:.86em;display:flex;flex-direction:column;gap:.1em}button.sbm{cursor:pointer}button.sbm:hover{border-color:var(--blue)}
 .sbi.on .sbm{border-color:var(--orange);background:var(--orangeL)}.sbi.conc .sbm{opacity:.5}.sbi.conc .sbt{text-decoration:line-through}.sbm small{color:var(--muted);font-size:.82em}
 .prt{align-self:flex-start;font-size:.7em;font-weight:800;border-radius:6px;padding:0 .4em;text-transform:uppercase;letter-spacing:.03em}.prt.urg{background:#fde2e2;color:#a12a2a}.prt.imp{background:#fff1dc;color:#9a4b00}.prt.med{background:#e7efff;color:#2c4ea0}
+.sbghost{position:fixed;z-index:99;pointer-events:none;opacity:.9;box-shadow:0 6px 18px rgba(0,0,0,.18);border-color:var(--orange)!important;background:var(--orangeL)!important}.sbm.arrastando{opacity:.4}body.sbdrag{cursor:grabbing;user-select:none}button.sbm{touch-action:none}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -926,6 +927,18 @@ let ARRASTOU=false;
     if(!d.on)return;ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);d.g.remove();
     if(d.fora){moveTrecho(d.id,d.de,d.n,null);return}if(!d.para)return;
     const [pd,pp]=d.para.split("#");moveTrecho(d.id,d.de,d.n,pd+"#"+(+pp))};
+  document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
+/* arrastar do Sprint Backlog direto pra grade (um clique continua selecionando) */
+(function(){let D=null;
+  const celula=(x,y)=>{const el=document.elementFromPoint(x,y);const td=el&&el.closest(".grade td[data-k]");if(!td)return null;const r=td.getBoundingClientRect();const n=+td.dataset.n||1;const j=Math.max(0,Math.min(n-1,Math.floor((y-r.top)/r.height*n)));const [d,pt]=td.dataset.k.split("#");return {k:d+"#"+(+pt+j),td}};
+  document.addEventListener("pointerdown",e=>{const b=e.target.closest(".sbm[data-sel]");if(!b||e.button>0)return;D={id:b.dataset.sel,x:e.clientX,y:e.clientY,b,on:false}});
+  document.addEventListener("pointermove",e=>{if(!D)return;if(!D.on){if(Math.hypot(e.clientX-D.x,e.clientY-D.y)<6)return;D.on=true;const r=D.b.getBoundingClientRect();
+      D.g=D.b.cloneNode(true);D.g.className="sbm sbghost";D.g.style.width=Math.min(r.width,260)+"px";document.body.appendChild(D.g);D.b.classList.add("arrastando");document.body.classList.add("sbdrag")}
+    e.preventDefault();D.g.style.left=(e.clientX+8)+"px";D.g.style.top=(e.clientY+8)+"px";
+    document.querySelectorAll(".grade td.drop,.grade td.dropno").forEach(t=>t.classList.remove("drop","dropno"));D.g.style.display="none";const a=celula(e.clientX,e.clientY);D.g.style.display="";D.k=a?a.k:null;
+    if(a)a.td.classList.add(a.td.dataset.g?"drop":"dropno")});
+  const fim=e=>{if(!D)return;const d=D;D=null;document.querySelectorAll(".grade td.drop,.grade td.dropno").forEach(t=>t.classList.remove("drop","dropno"));document.body.classList.remove("sbdrag");
+    if(!d.on)return;ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);d.g.remove();d.b.classList.remove("arrastando");if(!d.k)return;encaixa(d.id,d.k);render()};
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
 function desencaixa(id,k){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d,pt0]=k.split("#");const t0=+pt0<4?0:4;
   const nb=(c.blocos||[]).filter(b=>{const [bd,bp]=b.split("#");return !(bd===d&&+bp>=t0&&+bp<t0+4)});salvaBlocos(id,nb);SEL=id}

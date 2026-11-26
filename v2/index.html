@@ -757,7 +757,7 @@ const STATS=[["afazer","A fazer"],["prog","Programado"],["and","Em andamento"],[
 const statusDe=c=>c.estado==="conc"?"conc":c.estado==="trav"?"trav":c.estado==="and"?"and":c.ini?"prog":"afazer";
 const STATX={afazer:"a fazer",prog:"programado",and:"em andamento",trav:"travado",conc:"concluído"};
 /* lê Status + Início do formulário e devolve as mudanças no card (ou um erro) */
-function lerStatus(c,st,ini){const p={};const de=c?c.estado:null;
+function lerStatus(c,st,ini){const p={};const de=c?c.estado:null;if(st==="afazer"&&ini){if(c&&statusDe(c)==="prog"&&c.ini===ini)ini=null;else st="prog"}
   if(st==="prog"&&!ini)return {erro:"Programado precisa do início previsto."};
   p.estado=st==="conc"?"conc":st==="trav"?"trav":st==="and"?"and":"prev";
   if(st==="afazer")p.ini=null;else if(ini)p.ini=ini;

@@ -69,7 +69,7 @@ select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--or
 .bki{display:flex;align-items:center;gap:.5em}.bki .bkc{flex:1;min-width:0}.bki .bt{margin-left:auto}
 .bkn{font-weight:700;color:var(--muted);font-size:.88em;min-width:2.2em;font-variant-numeric:tabular-nums}.bkn.big{font-size:.8em;min-width:0;margin-right:.2em}
 .alca{cursor:grab;color:var(--muted);font-size:.8em;letter-spacing:-2px;user-select:none}.bki.arr{cursor:grab}.bki.arrastando{opacity:.4}
-.bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
+.bki.dentro{outline:2px solid var(--blue);outline-offset:-2px;background:#eef4ff}.bki.antes{box-shadow:inset 0 3px 0 var(--blue)}.bki.depois{box-shadow:inset 0 -3px 0 var(--blue)}
 .cod{font-size:.72em;font-weight:700;color:var(--muted);letter-spacing:.04em;font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
 .bki.sub{margin-left:1.8em;background:var(--bg)}.bki.sub .bkn{font-size:.8em}.nsub{font-size:.75em;white-space:nowrap}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -1224,8 +1224,9 @@ function arvore(cs,base){const ids=new Set(cs.map(([x])=>x));const byId=Object.f
 function posBk(pj,cid){const P=S.projetos[pj]||{};const c=S.cards[cid];if(!c)return "";const k=chaveEt(P,c);const e=(P.etapas||[]).indexOf(c.etp);
   const L=arvore(doPj(pj).filter(([,x])=>chaveEt(P,x)===k),e>=0?(e+1)+".":"");const it=L.find(([[x]])=>x===cid);return it?it[1]:""}
 function gBkMover(cid,alvo,pos,pj){const c=S.cards[cid],a=S.cards[alvo];if(!c||!a)return;
-  abrir('<h2>Mudar a ordem?</h2><p>Mover <b>'+posBk(pj,cid)+' · '+esc(c.t)+'</b></p><p>para '+(pos==="antes"?"antes":"depois")+' de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>?</p>'+
-   '<div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri" data-a="bkmvok" data-id="'+cid+'" data-alvo="'+alvo+'" data-pos="'+pos+'" data-bk="'+pj+'">Mover</button></div>')}
+  const txt=pos==="dentro"?'para <b>dentro</b> de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>? Ela vira uma subação.':'para '+(pos==="antes"?"antes":"depois")+' de <b>'+posBk(pj,alvo)+' · '+esc(a.t)+'</b>?'+((c.pai||"")!==(a.pai||"")?(a.pai?' Ela vira uma subação.':' Ela vira uma ação principal.'):'');
+  abrir('<h2>'+(pos==="dentro"?"Colocar dentro?":"Mudar a ordem?")+'</h2><p>Mover <b>'+posBk(pj,cid)+' · '+esc(c.t)+'</b></p><p>'+txt+'</p>'+
+   '<div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri" data-a="bkmvok" data-id="'+cid+'" data-alvo="'+alvo+'" data-pos="'+pos+'" data-bk="'+pj+'">'+(pos==="dentro"?"Colocar dentro":"Mover")+'</button></div>')}
 function gBacklog(id,abreEt){numerarPj(id);const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;const ets=P.etapas||[];
   const todas=Object.entries(S.cards).filter(([,c])=>c&&!c.apagado&&c.pj===id);
   const st=c=>{const x=statusDe(c);return x==="afazer"?["back",""]:[x,x==="prog"?"programado "+dm(c.ini):STATX[x]]};
@@ -1246,11 +1247,15 @@ function gBacklog(id,abreEt){numerarPj(id);const P=S.projetos[id];const pode=ADM
    '<div class="bts">'+(pode?'<button class="btn esq" data-a="novaacao" data-p="'+esc(P.dono||MEU||"")+'" data-pj="'+id+'" data-dest="back">+ ação no backlog</button>':'')+'<button class="btn" data-a="fechar">Fechar</button></div>')}
 
 /* arrastar no backlog: solta antes/depois de outra ação da mesma etapa e pede confirmação */
-(()=>{let DRG=null;const limpa=()=>document.querySelectorAll(".bki.antes,.bki.depois").forEach(x=>x.classList.remove("antes","depois"));
-  document.addEventListener("dragstart",e=>{const it=e.target.closest&&e.target.closest(".bki.arr");if(!it)return;DRG={cid:it.dataset.dcid,lst:it.parentElement,pj:it.dataset.dpj,pai:it.dataset.dpai||""};it.classList.add("arrastando");try{e.dataTransfer.setData("text/plain",DRG.cid);e.dataTransfer.effectAllowed="move"}catch(x){}});
+(()=>{let DRG=null;const limpa=()=>document.querySelectorAll(".bki.antes,.bki.depois,.bki.dentro").forEach(x=>x.classList.remove("antes","depois","dentro"));
+  // onde soltar: meio de uma principal = dentro; em cima/embaixo = antes/depois. Ação com subações não entra em outra.
+  const zona=(it,y)=>{const r=it.getBoundingClientRect();const f=(y-r.top)/r.height;const ehPrinc=!it.dataset.dpai;const podeDentro=ehPrinc&&!DRG.temSub&&DRG.pai!==it.dataset.dcid;
+    if(podeDentro&&f>.28&&f<.72)return "dentro";const pos=f<.5?"antes":"depois";if(it.dataset.dpai&&DRG.temSub)return null;return pos};
+  const alvoOk=it=>it&&it.parentElement===DRG.lst&&it.dataset.dcid!==DRG.cid;
+  document.addEventListener("dragstart",e=>{const it=e.target.closest&&e.target.closest(".bki.arr");if(!it)return;const cid=it.dataset.dcid;DRG={cid,lst:it.parentElement,pj:it.dataset.dpj,pai:it.dataset.dpai||"",temSub:filhos(cid).length>0};it.classList.add("arrastando");try{e.dataTransfer.setData("text/plain",cid);e.dataTransfer.effectAllowed="move"}catch(x){}});
   document.addEventListener("dragend",e=>{document.querySelectorAll(".bki.arrastando").forEach(x=>x.classList.remove("arrastando"));limpa();setTimeout(()=>DRG=null,0)});
-  document.addEventListener("dragover",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!it||it.parentElement!==DRG.lst||it.dataset.dcid===DRG.cid||(it.dataset.dpai||"")!==DRG.pai)return;e.preventDefault();limpa();const r=it.getBoundingClientRect();it.classList.add(e.clientY<r.top+r.height/2?"antes":"depois")});
-  document.addEventListener("drop",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!it||it.parentElement!==DRG.lst||it.dataset.dcid===DRG.cid||(it.dataset.dpai||"")!==DRG.pai){limpa();return}e.preventDefault();const r=it.getBoundingClientRect();const pos=e.clientY<r.top+r.height/2?"antes":"depois";const d=DRG;limpa();DRG=null;gBkMover(d.cid,it.dataset.dcid,pos,d.pj)});
+  document.addEventListener("dragover",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!alvoOk(it))return;const z=zona(it,e.clientY);if(!z){limpa();return}e.preventDefault();limpa();it.classList.add(z)});
+  document.addEventListener("drop",e=>{if(!DRG)return;const it=e.target.closest&&e.target.closest(".bki");if(!alvoOk(it)){limpa();return}const z=zona(it,e.clientY);if(!z){limpa();return}e.preventDefault();const d=DRG;limpa();DRG=null;gBkMover(d.cid,it.dataset.dcid,z,d.pj)});
 })();
 /* ================= atividades recorrentes ================= */
 const FREQ={sem:"Toda semana",quin:"A cada 15 dias",mes:"Todo mês"};
@@ -1616,11 +1621,13 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "bkdelok":{if(!precisa())return;{const ks=filhos(id).sort((x,y)=>ordDe(x[1])-ordDe(y[1]));if(ks.length){const P=S.projetos[c.pj]||{};const p0=ordDe(c);const prox=doPj(c.pj).filter(([x,y])=>x!==id&&!y.pai&&chaveEt(P,y)===chaveEt(P,c)&&ordDe(y)>p0).map(([,y])=>ordDe(y)).sort((x,y)=>x-y)[0];ks.forEach(([k],i)=>DB.set("cards",k,{pai:null,ord:prox!=null?p0+(prox-p0)*(i+1)/(ks.length+1):p0+i+1}))}}DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
   case "edcanc":if(VOLTA){const v=VOLTA;VOLTA=null;v()}else fechar();return;
   case "bkver":gBkVer(id,b.dataset.bk);return;
-  case "bkmvok":{const pj=b.dataset.bk,P=S.projetos[pj]||{};const alvo=S.cards[b.dataset.alvo];if(!alvo||!c){gBacklog(pj);return}const k=chaveEt(P,alvo);
-    const sib=doPj(pj).filter(([x,cc])=>x!==id&&chaveEt(P,cc)===k&&(cc.pai||"")===(alvo.pai||"")).sort((p,q)=>ordDe(p[1])-ordDe(q[1]));const ix=sib.findIndex(([x])=>x===b.dataset.alvo);
-    const ante=b.dataset.pos==="antes"?sib[ix-1]:sib[ix],depo=b.dataset.pos==="antes"?sib[ix]:sib[ix+1];
-    const o=ante&&depo?(ordDe(ante[1])+ordDe(depo[1]))/2:ante?ordDe(ante[1])+1:depo?ordDe(depo[1])-1:0;
-    const mud={ord:o,atualizado:Date.now()};if(c.etp!==alvo.etp)mud.etp=alvo.etp||null;DB.set("cards",id,mud);toast("Ordem atualizada");gBacklog(pj);return}
+  case "bkmvok":{const pj=b.dataset.bk,P=S.projetos[pj]||{};const alvo=S.cards[b.dataset.alvo];if(!alvo||!c){gBacklog(pj);return}const k=chaveEt(P,alvo);const pos=b.dataset.pos;
+    const novoPai=pos==="dentro"?b.dataset.alvo:(alvo.pai||null);
+    if(novoPai&&filhos(id).length){toast("Uma ação que tem subações não pode ir para dentro de outra.");gBacklog(pj);return}
+    const sib=doPj(pj).filter(([x,cc])=>x!==id&&chaveEt(P,cc)===k&&(cc.pai||null)===novoPai).sort((p,q)=>ordDe(p[1])-ordDe(q[1]));let o;
+    if(pos==="dentro"){o=sib.reduce((m,[,y])=>Math.max(m,ordDe(y)),0)+1}
+    else{const ix=sib.findIndex(([x])=>x===b.dataset.alvo);const ante=pos==="antes"?sib[ix-1]:sib[ix],depo=pos==="antes"?sib[ix]:sib[ix+1];o=ante&&depo?(ordDe(ante[1])+ordDe(depo[1]))/2:ante?ordDe(ante[1])+1:depo?ordDe(depo[1])-1:0}
+    const mud={ord:o,pai:novoPai,atualizado:Date.now()};if(c.etp!==alvo.etp)mud.etp=alvo.etp||null;DB.set("cards",id,mud);toast(pos==="dentro"?"Agora é uma subação":"Ordem atualizada");gBacklog(pj);return}
   case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
   case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const _st=lerStatus(c,$("edSt").value,ini);if(_st.erro){$("edErr").textContent=_st.erro;$("edI").focus();return}if("ini" in _st.p)ini=_st.p.ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,

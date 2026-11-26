@@ -563,6 +563,9 @@ let CODT=null;function codificar(){if(!ADMIN)return;clearTimeout(CODT);CODT=setT
 const DB={
   set(c,id,data){if(c==="cards"&&data&&!data.cod&&!(S.cards&&S.cards[id]&&S.cards[id].cod)&&(data.t||data.dono)&&!(S.cards&&S.cards[id]))data={...data,cod:novoCod()};
     if(DEMO){const o=DEMOST[c]||(DEMOST[c]={});o[id]={...(o[id]||{}),...data};Object.keys(o[id]).forEach(k=>{if(o[id][k]===null)delete o[id][k]});saveDemo();aplicarDemo();return Promise.resolve()}
+    // mostra a mudança na hora (o servidor confirma em seguida pelo onSnapshot)
+    try{const mapa={cards:"cards",projetos:"projetos",rec:"rec",comp:"comp",retro:"retro",pessoas:"pessoasX",sprints:"sprints",mov:"mov"}[c];const mesc=(o)=>{const n={...(o||{}),...data};Object.keys(n).forEach(k=>{if(n[k]===null)delete n[k]});return n};
+      if(mapa&&S[mapa]){S[mapa]={...S[mapa],[id]:mesc(S[mapa][id])}}else if(c==="cfg"&&id==="geral"){S.cfg=mesc(S.cfg)}else if(c==="daily"&&id===HOJE){S.daily=mesc(S.daily)}}catch(e){console.error(e)}
     return fs.collection(COL[c]).doc(id).set(data,{merge:true}).catch(falha)},
   add(c,data){return DB.set(c,nid(),data)}
 };

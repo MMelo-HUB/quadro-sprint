@@ -733,6 +733,7 @@ const TIPOS=CATS;
 /* esforço vazio: avisa no primeiro Salvar; no segundo, salva assim mesmo */
 function confEsf(sel,errEl){if(!sel||sel.value||sel.dataset.avisado==="1")return true;sel.dataset.avisado="1";sel.classList.add("alerta");sel.onchange=()=>sel.classList.remove("alerta");const t="O esforço não foi definido.";if(errEl)errEl.textContent=t;else toast(t,6000);sel.focus();return false}
 /* prioridade: 1 urgente, 2 importante, 3 média, 4 normal (pv:2). Ações antigas (sem pv): alta→importante, normal/baixa→normal */
+let VOLTA=null;
 const PRIS=[[1,"Urgente"],[2,"Importante"],[3,"Média"],[4,"Normal"]];const priDe=c=>c&&c.pv===2?(+c.pri||4):({1:2}[c&&c.pri]||4);
 const ESFS=[[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[4,"1 turno · 4h"],[8,"2 turnos · 8h"],[16,"4 turnos · 16h"]];
 const catDe=c=>c.cat||c.tipo||null;
@@ -1183,7 +1184,8 @@ function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;cons
   const outros=todas.filter(([,c])=>!ets.includes(c.etp));if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
   const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span>'+esc(c.t)+'<small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt"><span class="eapst '+k+'">'+tx+'</span>'+
-    (pode&&sprint()&&k==="back"?'<button class="btn sm pri" data-a="trazer" data-id="'+cid+'">Pra sprint</button>':'')+'</span></div>'};
+    (pode&&sprint()&&k==="back"?'<button class="btn sm pri" data-a="trazer" data-id="'+cid+'">Pra sprint</button>':'')+
+    ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button><button class="btn sm no" data-a="bkdel" data-id="'+cid+'" data-bk="'+id+'" title="Excluir esta ação">✕</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
    (todas.length||ets.length?grupos.map(([n,cs,i])=>{const feitas=cs.filter(([,c])=>c.estado==="conc").length;const atual=i===(P.etapa||0);
      return '<details class="eap'+(atual?' atual':'')+'"'+(atual||!n||cs.some(([,c])=>c.sprint===S.cfg.sprint)?' open':'')+'><summary>'+(n?'<b>'+esc(n)+(atual?' <em>etapa atual</em>':'')+'</b>':'<b></b>')+'<span class="eapn">'+feitas+'/'+cs.length+'</span><span class="eapb"><i style="width:'+(cs.length?Math.round(100*feitas/cs.length):0)+'%"></i></span></summary>'+
@@ -1541,10 +1543,13 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "pessoas":if(precisa())gPessoas(id);return;
   case "pessoasok":{const d=$("psD").value;const com=[...document.querySelectorAll("[data-com]:checked")].map(x=>x.value).filter(x=>x!==d);DB.set("cards",id,{dono:d,com,atualizado:Date.now()});
     if(d!==c.dono)logMov(id,c,c.estado,c.estado,"passou de "+nome(c.dono)+" pra "+nome(d));fechar();return}
-  case "editar":if(precisa())gEditar(id);return;
+  case "editar":if(precisa()){VOLTA=b.dataset.bk?(()=>{const pj=b.dataset.bk;return ()=>gBacklog(pj)})():null;gEditar(id)}return;
+  case "bkdel":{if(!precisa())return;const pj=b.dataset.bk;abrir('<h2>Excluir ação?</h2><p><b>'+esc(c.t)+'</b></p><p class="ct">Ela sai do backlog e de qualquer sprint.'+(c.estado==="conc"?' Atenção: esta ação já foi concluída e sai também do histórico da sprint.':'')+'</p><div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri no" data-a="bkdelok" data-id="'+id+'" data-bk="'+pj+'">Excluir</button></div>');return}
+  case "bkdelok":{if(!precisa())return;DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
+  case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
   case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,
-      dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,pv:2,ini,fim,atualizado:Date.now()});fechar();return}
+      dep:vt==="dep"&&vc?vc:null,acomp:vt==="acomp"&&vc?vc:null,esf:$("edE").value?+$("edE").value:null,pri:+$("edPr").value,pv:2,ini,fim,atualizado:Date.now()});fechar();if(VOLTA){const v=VOLTA;VOLTA=null;v()}return}
   case "apagar":if(precisa())gMotivo(id,"apagarok","Tirar da sprint");return;
   case "apagarok":{const mo=$("moT").value.trim();if(!mo){$("moErr").textContent="Escreva o motivo.";return}DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,"fora","tirada da sprint: "+mo);fechar();toast("Tirada da sprint");return}
   case "sit":if(precisa())gSit(id);return;

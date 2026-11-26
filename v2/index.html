@@ -92,6 +92,9 @@ details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}deta
 @keyframes rszpisca{0%,70%{opacity:.8}100%{opacity:0}}@media (hover:none){.rsz{display:none}}
 .trbt{display:flex;flex-wrap:wrap;gap:.4em;align-items:center;padding:.3em 0}.trbt .ct{width:100%;font-size:.8em}
 .rszov{position:fixed;z-index:98;pointer-events:none;border:2px dashed var(--blue);background:rgba(37,99,235,.10);border-radius:8px;display:flex;align-items:flex-end;justify-content:center;font-weight:800;color:var(--blue2);font-size:.8em;padding-bottom:2px}body.rszando{cursor:ns-resize;user-select:none}
+.grade td.fora{background:repeating-linear-gradient(135deg,rgba(100,116,139,.07) 0 6px,transparent 6px 12px);cursor:not-allowed}
+.grade th.t small.thora{display:block;font-weight:600;color:var(--muted);font-size:.75em}.grade th.t .tmin{display:block;margin:.2em auto 0;border:1px solid var(--line);background:var(--paper);border-radius:6px;width:22px;line-height:1.1;color:var(--muted);cursor:pointer}
+tr.tfech td{padding:2px}.tbar{width:100%;border:1px dashed var(--line);background:var(--bg);border-radius:8px;padding:.25em .6em;text-align:left;font-size:.8em;font-weight:700;color:var(--muted);cursor:pointer}.tbar:hover{border-color:var(--blue);color:var(--blue2)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -550,13 +553,13 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const nid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 /* pessoas: membros (participam da daily) e bolsistas (20h/semana, com um membro responsável que atualiza por eles) */
-const bolsistas=()=>Object.entries(S.pessoasX).filter(([,x])=>x&&x.ativo!==false&&x.tipo==="bolsista").map(([id,x])=>({id,n:x.n,bol:true,resp:x.resp,pjs:x.pjs||(x.pj?[x.pj]:[]),hsem:+x.hsem||20})).sort((a,b)=>a.n.localeCompare(b.n,"pt"));
+const bolsistas=()=>Object.entries(S.pessoasX).filter(([,x])=>x&&x.ativo!==false&&x.tipo==="bolsista").map(([id,x])=>({id,n:x.n,bol:true,resp:x.resp,pjs:x.pjs||(x.pj?[x.pj]:[]),hsem:+x.hsem||20,hini:+x.hini||0})).sort((a,b)=>a.n.localeCompare(b.n,"pt"));
 /* membros: do cadastro novo (q2_pessoas, tipo membro); enquanto ele estiver vazio, a lista do quadro antigo */
 /* papéis: membro e organizador têm raia; coordenador (PO) e só leitura não têm raia nem entram nos ritos de execução */
 const PAPEIS={membro:"Membro",org:"Organizador",coord:"Coordenador",leitura:"Só leitura"};
 const papelDe=x=>x.papel||(x.org?"org":"membro");
 const temRaia=x=>["membro","org"].includes(papelDe(x));
-function refreshPessoas(){const M=Object.entries(S.pessoasX).filter(([,x])=>x&&x.tipo==="membro"&&x.ativo!==false&&temRaia(x)).map(([id,x])=>({id,n:x.n,email:x.email||"",org:!!x.org,daily:x.daily!==false,hdia:+x.hdia||8})).sort((a,b)=>a.n.localeCompare(b.n,"pt"));
+function refreshPessoas(){const M=Object.entries(S.pessoasX).filter(([,x])=>x&&x.tipo==="membro"&&x.ativo!==false&&temRaia(x)).map(([id,x])=>({id,n:x.n,email:x.email||"",org:!!x.org,daily:x.daily!==false,hdia:+x.hdia||8,hini:+x.hini||0})).sort((a,b)=>a.n.localeCompare(b.n,"pt"));
   const cad=Object.values(S.pessoasX).some(x=>x&&x.tipo==="membro");S.pessoas=cad?M:(S.pessoasBase||[])}
 function todos(){const B=bolsistas();const L=[];S.pessoas.forEach(p=>{L.push(p);B.filter(b=>b.resp===p.id).forEach(b=>L.push(b))});B.filter(b=>!S.pessoas.find(p=>p.id===b.resp)).forEach(b=>L.push(b));return L}
 const pessoa=id=>todos().find(p=>p.id===id);
@@ -564,6 +567,13 @@ const nome=id=>id==="fora"?"alguém de fora":((pessoa(id)||{}).n||id||"");
 const rotB=b=>'<span class="bn">↳ '+esc(b.n)+'<em>bolsista</em></span>';
 const rot=p=>p.bol?'<span style="font-weight:500;color:var(--muted)">↳ '+esc(p.n)+' <small>(bolsista)</small></span>':esc(p.n);
 const partesDia=p=>{const x=pessoa(p);return x&&x.bol?Math.max(1,Math.min(8,Math.round(x.hsem/5))):(x&&x.hdia?Math.max(1,Math.min(8,x.hdia)):8)};
+const TURNOS=["Manhã","Tarde","Noite"];const NPT=12;const turnoDe=pt=>Math.floor(pt/4);const fimTurno=pt=>(turnoDe(pt)+1)*4;const turnoNome=pt=>TURNOS[turnoDe(pt)].toLowerCase();
+/* horas de trabalho da pessoa: começa na parte hini (0 = 1ª hora da manhã) e segue pelas horas do dia, atravessando turnos */
+const iniDe=p=>{const x=pessoa(p);return Math.max(0,Math.min(NPT-1,+(x&&x.hini)||0))};
+const trabalha=(p,pt)=>{const i=iniDe(p);return pt>=i&&pt<Math.min(NPT,i+partesDia(p))};
+const todosTrabalham=(parts,pt)=>parts.every(x=>trabalha(x,pt));
+let TURF={};try{TURF=JSON.parse(localStorage.getItem("q2-tur")||"{}")}catch(e){}
+const turnoFechado=(p,t)=>{if(t===1)return false;const k=p+"|"+t;if(k in TURF)return TURF[k];for(let pt=t*4;pt<t*4+4;pt++)if(trabalha(p,pt))return false;return true};
 const podeRaia=p=>{if(LEITURA)return false;if(ADMIN||MEU===p)return true;const x=pessoa(p);return !!(x&&x.bol&&x.resp===MEU)};
 const sprint=()=>S.sprints[S.cfg.sprint]||null;
 function toast(t,ms){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,ms||2600)}
@@ -825,7 +835,10 @@ const RITOS0=[{n:"Daily",q:"dia",dow:1,oc:"u",hora:"11:30",min:15,quem:"daily"},
 const DOWTX={1:"segunda",2:"terça",3:"quarta",4:"quinta",5:"sexta"};
 /* ritos antigos (só texto) ganham dia da semana a partir do texto */
 const ritoOk=r=>{if(r.dow)return r;const t=String(r.dia||"").toLowerCase();const d=+(Object.entries(DOWTX).find(([,v])=>t.includes(v))||[1])[0];return {...r,q:r.q==="dia"?"dia":"sprint",dow:d,oc:"u"}};
-const expd=()=>({m:(S.cfg.exp&&S.cfg.exp.m)||"08:00",t:(S.cfg.exp&&S.cfg.exp.t)||"13:00"});
+const expd=()=>({m:(S.cfg.exp&&S.cfg.exp.m)||"08:00",t:(S.cfg.exp&&S.cfg.exp.t)||"13:00",n:(S.cfg.exp&&S.cfg.exp.n)||"18:00"});
+const hmin=x=>{const [h,m]=String(x||"").split(":").map(Number);return (h||0)*60+(m||0)};
+const slotMin=pt=>{const E=expd();return hmin([E.m,E.t,E.n][turnoDe(pt)])+(pt%4)*60};
+const slotHora=pt=>{const m=slotMin(pt);return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
 const ritos=()=>(Array.isArray(S.cfg.ritos)?S.cfg.ritos:RITOS0).map(ritoOk);
 /* em que dias da sprint o rito acontece */
 /* "03/12, 14/01/2027" -> ["2026-12-03","2027-01-14"]; sem ano = a próxima ocorrência a partir de 60 dias atrás */
@@ -838,11 +851,11 @@ function ritoDias(r){const ds=diasSp();if(r.q==="dia")return ds;if(r.q==="datas"
   if(r.q==="mes")return L.filter(d=>r.oc==="u"?addDias(d,7).slice(5,7)!==d.slice(5,7):Math.ceil(+d.slice(8,10)/7)===+(r.oc||1));if(!L.length)return [];const n=r.oc==="u"?L.length:+(r.oc||1);return [L[Math.min(n,L.length)-1]]}
 /* que partes do dia (0-3 manhã, 4-7 tarde) o rito ocupa, pelo horário e pelo início de cada turno */
 function ritoPartes(r,marca){const hm=x=>{const [h,m]=String(x||"").split(":").map(Number);return (h||0)*60+(m||0)};if(!r.hora)return [];const E=expd();const ini=hm(r.hora),fim=ini+Math.max(1,+r.min||0);const L=[];
-  for(let pt=0;pt<8;pt++){const a=pt<4?hm(E.m)+pt*60:hm(E.t)+(pt-4)*60;const cob=Math.min(fim,a+60)-Math.max(ini,a);if(cob>0&&(marca?cob<30:cob>=30))L.push(pt)}return L}
+  for(let pt=0;pt<NPT;pt++){const a=slotMin(pt);const cob=Math.min(fim,a+60)-Math.max(ini,a);if(cob>0&&(marca?cob<30:cob>=30))L.push(pt)}return L}
 /* ritos curtos (menos de meia hora numa parte) não bloqueiam: viram lembrete dentro da parte */
 function ritoMarcas(p){const m={};const x=pessoa(p);const hm=v=>{const [h,mm]=String(v||"").split(":").map(Number);return (h||0)*60+(mm||0)};const E=expd();
   ritos().forEach((r,ri)=>{if(!ritoParticipa(r,x))return;const pts=ritoPartes(r,true);const ini=hm(r.hora),fim=ini+(+r.min||0);
-    ritoDias(r).forEach(d=>pts.forEach(pt=>{const a=pt<4?hm(E.m)+pt*60:hm(E.t)+(pt-4)*60;const o=Math.max(0,ini-a),f=Math.min(60,fim-a);(m[d+"#"+pt]=m[d+"#"+pt]||[]).push({i:ri,t:r.n+" "+r.hora,o:o/60,d:Math.max(5,f-o)/60})}))});return m}
+    ritoDias(r).forEach(d=>pts.forEach(pt=>{const a=slotMin(pt);const o=Math.max(0,ini-a),f=Math.min(60,fim-a);(m[d+"#"+pt]=m[d+"#"+pt]||[]).push({i:ri,t:r.n+" "+r.hora,o:o/60,d:Math.max(5,f-o)/60})}))});return m}
 const ritoParticipa=(r,x)=>x&&!x.bol&&temRaia(x)&&(r.quem!=="daily"||x.daily);
 /* tira das ações as horas que caíram em cima de um rito (voltam como "falta encaixar") */
 function liberaRitos(){let n=0;cardsSprint().forEach(([id,c])=>{const parts=[c.dono,...(c.com||[])].filter(Boolean);const bloq=new Set();
@@ -885,11 +898,15 @@ let SEL=null;
 /* cor fixa por frente: cada projeto uma cor, interno roxo, sem frente cinza-azulado */
 const PALETA=["#1d4ed8","#b45309","#0f766e","#be185d","#4d7c0f","#0369a1","#9f1239","#a16207","#155e75","#7c2d12"];
 function corFrente(c){if(catDe(c))return "#6d28d9";if(!c.pj)return "#475569";const ids=Object.keys(S.projetos).sort();const i=ids.indexOf(c.pj);return PALETA[(i<0?0:i)%PALETA.length]}
-function gradeHtml(p){const dias=diasSp();const m=ocup(p);const mk=ritoMarcas(p);const mkh=(k,j)=>(mk[k]||[]).map(z=>'<span class="mk" data-rito="'+z.i+'" style="--j:'+(j||0)+';--o:'+z.o+';--d:'+z.d+'" title="'+esc(z.t)+'">'+esc(z.t)+'</span>').join("");const cx=(n,html)=>'<div class="gx n'+Math.min(n,3)+'" style="--n:'+n+'">'+html+'</div>';const np=partesDia(p);const usados=new Map();
-  const run=(d,pt,id)=>{let n=1;const fimT=pt<4?Math.min(4,np):np;while(pt+n<fimT&&m[d+"#"+(pt+n)]&&m[d+"#"+(pt+n)].id===id)n++;return n};
+function gradeHtml(p){const dias=diasSp();const m=ocup(p);const mk=ritoMarcas(p);const mkh=(k,j)=>(mk[k]||[]).map(z=>'<span class="mk" data-rito="'+z.i+'" style="--j:'+(j||0)+';--o:'+z.o+';--d:'+z.d+'" title="'+esc(z.t)+'">'+esc(z.t)+'</span>').join("");const cx=(n,html)=>'<div class="gx n'+Math.min(n,3)+'" style="--n:'+n+'">'+html+'</div>';const usados=new Map();
+  const run=(d,pt,id)=>{let n=1;const fimT=fimTurno(pt);while(pt+n<fimT&&m[d+"#"+(pt+n)]&&m[d+"#"+(pt+n)].id===id)n++;return n};
   let h='<div class="gw"><table class="grade"><thead><tr><th class="t"></th>'+dias.map(d=>'<th class="'+(d===HOJE?"hoje":"")+'">'+SEM[dow(d)]+'<br>'+dm(d)+'</th>').join("")+'</tr></thead><tbody>';
-  for(let pt=0;pt<np;pt++){if(pt===4)h+='<tr class="sep"><td colspan="'+(dias.length+1)+'"></td></tr>';
-    h+='<tr><th class="t">'+(pt===0?(np>4?"Manhã":"Turno"):pt===4?"Tarde":"")+'</th>'+dias.map(d=>{const k=d+"#"+pt,v=m[k];const hj=d===HOJE?" hj":"";
+  for(let pt=0;pt<NPT;pt++){const t=turnoDe(pt);
+    if(pt%4===0){if(t>0)h+='<tr class="sep"><td colspan="'+(dias.length+1)+'"></td></tr>';
+      if(turnoFechado(p,t)){const ids=new Set();dias.forEach(d=>{for(let j=pt;j<pt+4;j++){const v=m[d+"#"+j];if(v&&v.k!=="rito")ids.add(v.id)}});
+        h+='<tr class="tfech"><th class="t">'+TURNOS[t]+'</th><td colspan="'+dias.length+'"><button class="tbar" data-tur="'+esc(p)+'|'+t+'">▸ '+TURNOS[t]+' minimizada'+(ids.size?' · '+ids.size+' item(ns) aqui':'')+' · clique pra abrir</button></td></tr>';pt+=3;continue}}
+    h+='<tr><th class="t">'+(pt%4===0?TURNOS[t]+'<small class="thora">'+slotHora(pt)+'</small>'+(t!==1?'<button class="tmin" data-tur="'+esc(p)+'|'+t+'" title="Minimizar">–</button>':''):'')+'</th>'+dias.map(d=>{const k=d+"#"+pt,v=m[k];const hj=d===HOJE?" hj":"";
+      if(!v&&!trabalha(p,pt))return '<td class="fora'+hj+'" data-k="'+k+'" data-n="1" title="Fora do horário de trabalho">'+cx(1,mkh(k))+'</td>';
       if(!v)return '<td class="vazio'+hj+(mk[k]?" commk":"")+'" data-k="'+k+'" data-n="1" data-g="'+k+'" data-gp="'+esc(p)+'">'+cx(1,mkh(k))+'</td>';
       const ant=pt%4?m[d+"#"+(pt-1)]:null;if(ant&&ant.id===v.id)return "";
       const n=run(d,pt,v.id);
@@ -906,14 +923,14 @@ let TRECHO=null;const PARTE=0;
 function encaixa(id,k){const c=S.cards[id];if(!c)return;if(!podeMexer(c)){toast("Só quem é da raia mexe nessa ação.");return}
   const [d,pt0]=k.split("#");const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
   const total=(+c.esf||1)-(c.blocos||[]).length;let rest=PARTE?Math.min(PARTE,total):total;if(total<=0){toast("Essa ação já está toda na grade.");SEL=null;render();return}const sobra=total-rest;
-  const nb=[...(c.blocos||[])];let pt=+pt0;const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,pt<4?4:8);while(rest>0&&pt<fimT&&!m[d+"#"+pt]){nb.push(d+"#"+pt);pt++;rest--}
+  const nb=[...(c.blocos||[])];let pt=+pt0;if(!todosTrabalham(parts,pt)){toast("Fora do horário de trabalho de "+parts.filter(x=>!trabalha(x,pt)).map(nome).join(", ")+".");return}const fimT=fimTurno(pt);while(rest>0&&pt<fimT&&!m[d+"#"+pt]&&todosTrabalham(parts,pt)){nb.push(d+"#"+pt);pt++;rest--}
   salvaBlocos(id,nb);RECEM={id,t:Date.now()};const falta=rest+sobra;if(falta<=0)SEL=null;else toast("Faltam "+falta+"h: "+(rest>0?"não coube tudo aí. ":"")+"toque ou arraste pra outro lugar da grade.")}
 /* move o trecho (n partes a partir de "de") pra começar em "para"; o que não couber volta pra "falta encaixar" */
 function moveTrecho(id,de,n,para){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d0,p0]=de.split("#");const run=new Set(Array.from({length:n},(_,j)=>d0+"#"+(+p0+j)));
   const base=(c.blocos||[]).filter(b=>!run.has(b));if(!para){salvaBlocos(id,base);toast("Tirada da grade: volta pra \"Para encaixar\"");return}
   const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});base.forEach(b=>m[b]={id:"outro"});
-  const [d,pt0]=para.split("#");const lim=Math.min(...parts.map(partesDia));let pt=+pt0;const fimT=Math.min(lim,pt<4?4:8);const nb=[...base];let rest=n;
-  while(rest>0&&pt<fimT&&!m[d+"#"+pt]){nb.push(d+"#"+pt);pt++;rest--}
+  const [d,pt0]=para.split("#");let pt=+pt0;const fimT=fimTurno(pt);const nb=[...base];let rest=n;
+  while(rest>0&&pt<fimT&&!m[d+"#"+pt]&&todosTrabalham(parts,pt)){nb.push(d+"#"+pt);pt++;rest--}
   if(rest===n){toast("Não cabe aí: esse horário já está ocupado.");return}
   salvaBlocos(id,nb);RECEM={id,t:Date.now()};if(rest>0)toast("Couberam "+(n-rest)+"h aí; faltam "+rest+"h pra encaixar.")}
 /* arrastar uma ação na grade: soltar numa parte move; soltar fora da grade tira */
@@ -937,7 +954,7 @@ let ARRASTOU=false;
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
 /* quanto um bloco pode crescer: até o fim do turno, sem invadir, usando o que falta encaixar */
 function limTrecho(id,d,p0,n0){const c=S.cards[id];const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
-  const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,p0<4?4:8);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p];p++)livre++;const falta=Math.max(0,(+c.esf||1)-(c.blocos||[]).length);return {maxN:Math.max(n0,Math.min(livre,n0+falta)),falta,livre}}
+  const fimT=fimTurno(p0);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p]&&todosTrabalham(parts,p);p++)livre++;const falta=Math.max(0,(+c.esf||1)-(c.blocos||[]).length);return {maxN:Math.max(n0,Math.min(livre,n0+falta)),falta,livre}}
 function aplicaTrecho(id,d,p0,n0,n){const c=S.cards[id];const velho=new Set(Array.from({length:n0},(_,j)=>d+"#"+(p0+j)));const nb=(c.blocos||[]).filter(b=>!velho.has(b));for(let j=0;j<n;j++)nb.push(d+"#"+(p0+j));salvaBlocos(id,nb);RECEM={id,t:Date.now()};render()}
 let RECEM=null;
 /* alça do bloco: puxar pra baixo aumenta (até o fim do turno, sem invadir, usando o que falta encaixar); pra cima diminui (volta pra "falta encaixar") */
@@ -945,7 +962,7 @@ let RECEM=null;
   document.addEventListener("pointerdown",e=>{const h=e.target.closest(".rsz");if(!h||e.button>0)return;const td=h.closest(".grade td[data-gid]");if(!td)return;e.preventDefault();e.stopPropagation();
     const id=td.dataset.gid,c=S.cards[id];if(!c||!podeMexer(c))return;const n0=+td.dataset.n||1;const [d,p0s]=td.dataset.gk.split("#");const p0=+p0s;
     const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
-    const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,p0<4?4:8);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p];p++)livre++;
+    const fimT=fimTurno(p0);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p]&&todosTrabalham(parts,p);p++)livre++;
     const falta=Math.max(0,(+c.esf||1)-(c.blocos||[]).length);const maxN=Math.max(n0,Math.min(livre,n0+falta));
     const r=td.getBoundingClientRect();R={id,c,d,p0,n0,n:n0,maxN,falta,livre,rowH:r.height/n0,r,ov:document.createElement("div")};R.ov.className="rszov";document.body.appendChild(R.ov);desenha();document.body.classList.add("rszando")},true);
   const desenha=()=>{const o=R.ov;o.style.left=R.r.left+"px";o.style.top=R.r.top+"px";o.style.width=R.r.width+"px";o.style.height=(R.rowH*R.n)+"px";o.textContent=R.n+"h"};
@@ -968,7 +985,7 @@ let RECEM=null;
   const fim=e=>{if(!D)return;const d=D;D=null;document.querySelectorAll(".grade td.drop,.grade td.dropno").forEach(t=>t.classList.remove("drop","dropno"));document.body.classList.remove("sbdrag");
     if(!d.on)return;ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);d.g.remove();d.b.classList.remove("arrastando");if(!d.k)return;encaixa(d.id,d.k);render()};
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
-function desencaixa(id,k){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d,pt0]=k.split("#");const t0=+pt0<4?0:4;
+function desencaixa(id,k){const c=S.cards[id];if(!c||!podeMexer(c))return;const [d,pt0]=k.split("#");const t0=turnoDe(+pt0)*4;
   const nb=(c.blocos||[]).filter(b=>{const [bd,bp]=b.split("#");return !(bd===d&&+bp>=t0&&+bp<t0+4)});salvaBlocos(id,nb);SEL=id}
 /* backlog na raia: só em aberto, um bloco por projeto, ordenado pelo que é mais urgente.
    Entra na lista: em andamento/travado; início até o fim desta sprint; prazo até o fim da PRÓXIMA sprint; próximas 5 principais da etapa em curso (+ subações). */
@@ -1084,7 +1101,7 @@ function pAju(){const linhas=(arr,vazio)=>arr.length?'<div class="lista">'+arr.j
     '<div class="pbox"><h2>Sem lugar na grade</h2>'+linhas(sem,"Tudo encaixado.")+'</div><div class="pbox"><h2>Folga a preencher</h2><p class="hint" style="margin:0 0 .5em">Melhoria contínua ou capacitação.</p>'+linhas(folga,"Sem folga além da reserva.")+'</div></div>'}
 function pLei(sp){const quem=sp.pleitor&&pessoa(sp.pleitor)?sp.pleitor:(S.pessoas[0]||{}).id;
   const my=cardsSprint().filter(([,c])=>ehDe(c,quem)).sort((a,b)=>String((a[1].blocos||[])[0]||"z").localeCompare(String((b[1].blocos||[])[0]||"z")));
-  const qd=c=>{const b=(c.blocos||[])[0];if(!b)return "sem lugar na grade";const [d,pt]=b.split("#");return fDia(d)+" · "+(+pt<4?"manhã":"tarde")};
+  const qd=c=>{const b=(c.blocos||[])[0];if(!b)return "sem lugar na grade";const [d,pt]=b.split("#");return fDia(d)+" · "+turnoNome(+pt)};
   const n=sp.compromisso?Object.keys(sp.compromisso).length:0;
   return '<div class="chips">'+todos().map(p=>'<button class="'+(p.id===quem?"on":"")+'" data-pl="'+esc(p.id)+'">'+esc(p.n)+(p.bol?" (bolsista)":"")+'</button>').join("")+'</div>'+
     '<div class="pbox"><h2>'+esc(nome(quem))+' · '+hrs(my)+'h em '+my.length+' ações</h2>'+(my.length?'<div class="lista">'+my.map(([,c])=>'<div class="it"><span><b>'+esc(c.t)+'</b>'+(c.res?'<small>→ '+esc(c.res)+'</small>':'')+'<small>'+[qd(c),projNome(c),FASES[c.fase],(c.com||[]).length?"com "+[c.dono,...c.com].filter(x=>x!==quem).map(nome).join(", "):"",c.esf?c.esf+"h":"sem esforço"].filter(Boolean).map(esc).join(" · ")+'</small></span>'+(c.plan===false?'<span class="stt risco">fora da planning</span>':'')+'</div>').join("")+'</div>':'<div class="empty">Nada planejado.</div>')+'</div>'+
@@ -1354,7 +1371,7 @@ function gBkMover(cid,alvo,pos,pj){const c=S.cards[cid],a=S.cards[alvo];if(!c||!
 function gBacklog(id,abreEt){numerarPj(id);const P=pjObj(id);if(!P)return;const vt=!!P.virtual;const pode=vt||ADMIN||P.dono===MEU;const ets=P.etapas||[];
   const todas=doPj(id);const catK=n=>Object.keys(CATS).find(k=>CATS[k]===n)||"";
   const recs=vt?Object.entries(S.rec).filter(([,r])=>r&&!r.apagado&&!r.pj):[];
-  const recLi=([rid,r])=>'<div class="li bki rec"><span class="bkn">↻</span><span class="bkc"><b class="bkt">'+esc(r.t)+'</b><small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),(+r.tu<4?"manhã":"tarde")+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt"><span class="eapst rec">recorrente</span><button class="btn sm" data-a="recedit" data-id="'+rid+'" data-bk="'+id+'">Editar</button></span></div>';
+  const recLi=([rid,r])=>'<div class="li bki rec"><span class="bkn">↻</span><span class="bkc"><b class="bkt">'+esc(r.t)+'</b><small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),turnoNome(+r.tu)+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt"><span class="eapst rec">recorrente</span><button class="btn sm" data-a="recedit" data-id="'+rid+'" data-bk="'+id+'">Editar</button></span></div>';
   const st=c=>{const x=statusDe(c);return x==="afazer"?["back",""]:[x,x==="prog"?"programado "+dm(c.ini):STATX[x]]};
   const pOrd=(a,b)=>ordDe(a[1])-ordDe(b[1]);
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>etpDe(P,c)===n).sort(pOrd),i]);
@@ -1394,7 +1411,7 @@ function caiEm(r,d){if(d<r.ini||d>r.ate)return false;
 function geraRec(sid,sp){sp=sp||S.sprints[sid];if(!sp)return 0;let n=0;const now=Date.now();
   Object.entries(S.rec).forEach(([rid,r])=>{if(!r||r.ativo===false)return;
     diasUteis(sp.ini,sp.fim).filter(d=>caiEm(r,d)).forEach(d=>{const cid="rec-"+rid+"-"+d;if(S.cards[cid]&&!(S.cards[cid].apagado&&S.cards[cid].foraDatas))return;const part=r.part||[];if(!part.length)return;
-      const bl=[];for(let k=0;k<r.dur;k++){const pt=+r.tu+(+r.pi||0)+k;if(pt<8)bl.push(d+"#"+pt)}
+      const bl=[];for(let k=0;k<r.dur;k++){const pt=+r.tu+(+r.pi||0)+k;if(pt<fimTurno(+r.tu))bl.push(d+"#"+pt)}
       const c={t:r.t,pj:r.pj||null,at:r.at||null,cat:r.cat||null,dono:part[0],com:part.slice(1),esf:+r.dur,estado:"prev",sprint:sid,plan:true,rec:rid,ini:d,blocos:bl,fase:r.fase||"exec",pri:4,pv:2,criado:now,criadoPor:"recorrente",atualizado:now,apagado:false,foraDatas:false};
       DB.set("cards",cid,c);n++})});return n}
 const pjArq=()=>Object.entries(S.projetos).filter(([,x])=>x&&x.ativo===false&&!x.apagado).sort((a,b)=>String(a[1].nome).localeCompare(String(b[1].nome),"pt"));
@@ -1451,14 +1468,14 @@ async function impGrava(){const D=IMP;if(!D||!ADMIN)return;const G=impGrupos(D);
   catch(e){console.error(e);if(msg)msg.textContent="Não gravou: "+(e.code||e.message);if(bt)bt.disabled=false}}
 function gRecList(pj){const L=Object.entries(S.rec).filter(([,r])=>r&&!r.apagado&&(pj?r.pj===pj:!r.pj));const P=pj&&S.projetos[pj];
   abrir('<h2>Recorrentes · '+(P?esc(P.nome):"internas")+'</h2>'+
-   (L.length?'<div class="lst">'+L.map(([rid,r])=>'<div class="li"><span>'+esc(r.t)+'<small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),(+r.tu<4?"manhã":"tarde")+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><button class="btn sm" data-a="recedit" data-id="'+rid+'">Editar</button></div>').join("")+'</div>':'<p class="ct">Nenhuma ainda.</p>')+
+   (L.length?'<div class="lst">'+L.map(([rid,r])=>'<div class="li"><span>'+esc(r.t)+'<small>'+[FREQ[r.freq],r.freq==="mes"?"":(r.dias||[]).map(d=>SEM[d]).join(", "),turnoNome(+r.tu)+" · "+r.dur+"h",(r.part||[]).map(nome).join(", "),r.ativo===false?"encerrada":"até "+dm(r.ate)].filter(Boolean).map(esc).join(" · ")+'</small></span><button class="btn sm" data-a="recedit" data-id="'+rid+'">Editar</button></div>').join("")+'</div>':'<p class="ct">Nenhuma ainda.</p>')+
    '<div class="bts"><button class="btn esq pri" data-a="recnovo" data-id="'+(pj||"")+'">+ atividade recorrente</button><button class="btn" data-a="fechar">Fechar</button></div>')}
 function gRec(rid,pj,pre){pre=pre||{};const r=rid?S.rec[rid]:{t:pre.t||"",freq:"sem",dias:[2],tu:4,pi:0,dur:1,ini:HOJE,ate:"",part:MEU?[MEU]:[],pj:pj||null,fase:"exec"};const fr=rid?frenteDe(r):(pre.fr||(pj?"p:"+pj:""));
   abrir('<h2>'+(rid?"Editar recorrente":"Nova atividade recorrente")+'</h2>'+(!rid&&fr.startsWith("c:")?'<label class="f">Tipo<select id="rcTp"><option value="unica">Única</option><option value="rec" selected>Recorrente (repete toda semana ou todo mês)</option></select></label>':'')+
    '<label class="f"><span>Atividade<span class="req">*</span></span><input id="rcT" value="'+esc(r.t||"")+'" placeholder="Reunião de acompanhamento com o cliente"></label>'+
    '<label class="f">Frente<select id="rcFr">'+frenteOpts(fr)+'</select></label>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase"><span>Participantes<span class="req">*</span></span></div>'+todosChk("data-rcp",r.part||[],null)+
-   '<div class="row"><label class="f">Frequência<select id="rcF">'+opts(Object.entries(FREQ),r.freq)+'</select></label><label class="f">Turno<select id="rcTu">'+opts([["0","Manhã"],["4","Tarde"]],String(r.tu))+'</select></label></div>'+
+   '<div class="row"><label class="f">Frequência<select id="rcF">'+opts(Object.entries(FREQ),r.freq)+'</select></label><label class="f">Turno<select id="rcTu">'+opts([["0","Manhã"],["4","Tarde"],["8","Noite"]],String(r.tu))+'</select></label></div>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase"><span>Dias da semana<span class="req">*</span></span></div><div class="chk">'+[1,2,3,4,5].map(d=>'<label><input type="checkbox" data-rcd value="'+d+'"'+((r.dias||[]).includes(d)?" checked":"")+'>'+SEMX[d]+'</label>').join("")+'</div>'+
    '<div class="row"><label class="f">Começa na parte do turno<select id="rcPi">'+opts([[0,"1ª"],[1,"2ª"],[2,"3ª"],[3,"4ª"]],r.pi||0)+'</select></label><label class="f">Duração<select id="rcD">'+opts([[1,"1h"],[2,"2h"],[3,"3h"],[4,"4h · turno inteiro"]],r.dur)+'</select></label></div>'+
    '<div class="row"><label class="f"><span>A partir de<span class="req">*</span></span><input id="rcI" type="date" value="'+esc(r.ini||HOJE)+'"></label><label class="f"><span>Termina em<span class="req">*</span></span><input id="rcA" type="date" value="'+esc(r.ate||"")+'"></label></div>'+
@@ -1466,7 +1483,7 @@ function gRec(rid,pj,pre){pre=pre||{};const r=rid?S.rec[rid]:{t:pre.t||"",freq:"
 function gMem(id){const m=id?S.pessoasX[id]:{daily:true,hdia:8};
   abrir('<h2>'+(id?"Editar membro":"Novo membro")+'</h2><label class="f"><span>Nome<span class="req">*</span></span><input id="meN" value="'+esc(m.n||"")+'"></label>'+
    '<label class="f">E-mail corporativo<input id="meE" type="email" value="'+esc(m.email||"")+'" placeholder="nome.sobrenome@al.senai.br"></label>'+
-   '<div class="row"><label class="f">Papel<select id="meO">'+opts(Object.entries(PAPEIS),papelDe(m))+'</select></label><label class="f">Horas por dia<input id="meH" type="number" min="1" max="8" value="'+(+m.hdia||8)+'"></label></div>'+
+   '<div class="row"><label class="f">Papel<select id="meO">'+opts(Object.entries(PAPEIS),papelDe(m))+'</select></label><label class="f">Começa às<select id="meI">'+opts(Array.from({length:NPT},(_,i)=>[String(i),TURNOS[turnoDe(i)]+" · "+slotHora(i)]),String(+m.hini||0))+'</select></label><label class="f">Horas por dia<input id="meH" type="number" min="1" max="8" value="'+(+m.hdia||8)+'"></label></div>'+
    '<div class="chk"><label><input type="checkbox" id="meD"'+(m.daily!==false?" checked":"")+'> Participa da daily</label></div>'+
    '<p class="ct" id="meErr" style="color:var(--no)"></p><div class="bts">'+(id&&m.ativo!==false?'<button class="btn esq" data-a="memfim" data-id="'+id+'">Desligar (tira o acesso)</button>':'')+(id&&m.ativo===false?'<button class="btn esq" data-a="memvolta" data-id="'+id+'">Religar</button>':'')+
    '<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="memok" data-id="'+(id||"")+'">Salvar</button></div>')}
@@ -1493,7 +1510,7 @@ async function atualizaConta(pid,campos){if(DEMO)return;const P=S.pessoasX[pid];
 function gBol(id){const b=id?S.pessoasX[id]:{hsem:20};
   abrir('<h2>'+(id?"Editar bolsista":"Novo bolsista")+'</h2>'+
    '<label class="f"><span>Nome<span class="req">*</span></span><input id="boN" value="'+esc(b.n||"")+'"></label>'+
-   '<div class="row"><label class="f"><span>Membro responsável<span class="req">*</span></span><select id="boR"><option value="">—</option>'+membrosOpt(b.resp||"")+'</select></label><label class="f">Horas por semana<input id="boH" type="number" min="4" max="40" step="4" value="'+(b.hsem||20)+'"></label></div>'+
+   '<div class="row"><label class="f"><span>Membro responsável<span class="req">*</span></span><select id="boR"><option value="">—</option>'+membrosOpt(b.resp||"")+'</select></label><label class="f">Começa às<select id="boI">'+opts(Array.from({length:NPT},(_,i)=>[String(i),TURNOS[turnoDe(i)]+" · "+slotHora(i)]),String(+b.hini||0))+'</select></label><label class="f">Horas por semana<input id="boH" type="number" min="4" max="40" step="4" value="'+(b.hsem||20)+'"></label></div>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Projetos em que atua</div><div class="chk">'+
    (Object.entries(S.projetos).filter(([,x])=>x&&x.ativo!==false).map(([pid,x])=>'<label><input type="checkbox" data-bop value="'+pid+'"'+((b.pjs||(b.pj?[b.pj]:[])).includes(pid)?" checked":"")+'>'+esc(x.nome)+'</label>').join("")||'<span class="hint">Nenhum projeto cadastrado ainda.</span>')+'</div>'+
    '<p class="ct" id="boErr" style="color:var(--no)"></p><div class="bts">'+(id?'<button class="btn esq" data-a="bolfim" data-id="'+id+'">Desligar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="bolok" data-id="'+(id||"")+'">Salvar</button></div>')}
@@ -1516,9 +1533,9 @@ function gComp(p){const dias=diasSp();
   abrir('<h2>'+(p==="equipe"?"Compromisso da equipe":"Compromisso fixo")+'</h2>'+
    '<label class="f"><span>O que é<span class="req">*</span></span><input id="cpT" placeholder="Visita técnica ao cliente"></label>'+
    '<div class="f" style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase"><span>Dias<span class="req">*</span></span></div><div class="chk">'+dias.map(d=>'<label><input type="checkbox" data-cpd value="'+d+'">'+fDia(d)+'</label>').join("")+'</div>'+
-   '<div class="row"><label class="f">Turno<select id="cpTu">'+opts([["0","Manhã"],["4","Tarde"],["dia","Dia inteiro"]],"0")+'</select></label><label class="f">Quanto tempo<select id="cpN">'+opts([[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[3,"¾ turno · 3h"],[4,"1 turno · 4h"]],4)+'</select></label></div>'+
+   '<div class="row"><label class="f">Turno<select id="cpTu">'+opts([["0","Manhã"],["4","Tarde"],["8","Noite"],["dia","Dia inteiro"]],"0")+'</select></label><label class="f">Quanto tempo<select id="cpN">'+opts([[1,"¼ turno · 1h"],[2,"½ turno · 2h"],[3,"¾ turno · 3h"],[4,"1 turno · 4h"]],4)+'</select></label></div>'+
    '<p class="ct" id="cpErr" style="color:var(--no)"></p><div class="bts"><button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="compok" data-p="'+esc(p)+'">Salvar</button></div>')}
-function gradeTexto(c){const g={};(c.blocos||[]).forEach(b=>{const [d,pt]=b.split("#");const k=d+"|"+(+pt<4?"manhã":"tarde");g[k]=(g[k]||0)+1});
+function gradeTexto(c){const g={};(c.blocos||[]).forEach(b=>{const [d,pt]=b.split("#");const k=d+"|"+turnoNome(+pt);g[k]=(g[k]||0)+1});
   return Object.entries(g).sort().map(([k,n])=>{const [d,t]=k.split("|");return SEM[dow(d)]+" "+dm(d)+" · "+t+" ("+n+"h)"}).join("; ")}
 /* marco de projeto ou de atendimento: criar, corrigir, apagar (usado na planning) */
 function gMarco(pj,at,i){const P=pj&&S.projetos[pj];const A=P&&at?(P.atendidos||[]).find(x=>x.id===at):null;const lst=A?(A.marcos||[]):P?(P.marcos||[]):[];const m=i!==""&&i!=null?lst[+i]:null;
@@ -1557,7 +1574,7 @@ function drawSprint(){const sp=sprint();let h="";
    h+='<div class="box"><h2>Ritos da equipe</h2><p class="hint" style="margin:0 0 .7em">Valem pra toda sprint: ocupam a grade de cada participante em Minha raia → Minha sprint (ninguém consegue encaixar ação por cima) e descontam da capacidade. A daily vale só pra quem participa da daily.</p>'+
     '<table class="capt rit"><thead><tr><th>Rito</th><th>Frequência</th><th>Dia (ou datas)</th><th>Qual</th><th>Horário</th><th>Duração (min)</th><th>Quem</th><th>Nesta sprint</th>'+(ADMIN?'<th></th>':'')+'</tr></thead><tbody>'+
     R.map((r,i)=>{const nd=ritoDias(r).length;const tot=(+r.min||0)*nd;const tx=tot>=60?Math.floor(tot/60)+"h"+(tot%60?String(tot%60).padStart(2,"0"):""):tot+"min";const pts=ritoPartes(r);
-      const mks=ritoPartes(r,true);const onde=!r.hora?"sem horário: não aparece na grade":pts.length?(pts[0]<4?"manhã":"tarde")+", bloqueia "+(pts.length>1?pts.length+" partes":"1 parte")+" da grade":"lembrete dentro da "+(mks[0]%4+1)+"ª parte da "+(mks[0]<4?"manhã":"tarde")+" (não bloqueia)";
+      const mks=ritoPartes(r,true);const onde=!r.hora?"sem horário: não aparece na grade":pts.length?turnoNome(pts[0])+", bloqueia "+(pts.length>1?pts.length+" partes":"1 parte")+" da grade":"lembrete dentro da "+(mks[0]%4+1)+"ª parte da "+(mks[0]<4?"manhã":"tarde")+" (não bloqueia)";
       return ADMIN?'<tr><td><input data-rt="'+i+':n" value="'+esc(r.n)+'"></td><td><select data-rt="'+i+':q">'+opts(Object.entries(fq),r.q)+'</select></td>'+
         '<td><select data-rt="'+i+':dow"'+(r.q==="dia"?' disabled':'')+(r.q==="datas"?' hidden':'')+'>'+opts(Object.entries(DOWTX).map(([k,v])=>[k,v]),String(r.dow))+'</select>'+
          '<input data-rt="'+i+':datas" value="'+esc(txtDatas(r.datas))+'" placeholder="03/12, 14/01"'+(r.q==="datas"?'':' hidden')+' title="Datas separadas por vírgula (dd/mm). Ano só se não for o próximo dessa data."></td>'+
@@ -1565,7 +1582,7 @@ function drawSprint(){const sp=sprint();let h="";
         '<td><input type="time" data-rt="'+i+':hora" value="'+esc(r.hora||"")+'"></td><td><input type="number" min="5" step="5" data-rt="'+i+':min" value="'+(+r.min||0)+'" style="width:5em"></td>'+
         '<td><select data-rt="'+i+':quem">'+opts([["daily","Quem participa da daily"],["todos","Todos os membros"]],r.quem)+'</select></td><td>'+tx+'<small class="ct" style="display:block">'+esc(proxs(r)?(nd>3?nd+" dias":proxs(r)):"")+' · '+onde+'</small></td><td><button class="btn sm" data-a="ritodel" data-i="'+i+'" title="Tirar">✕</button></td></tr>'
         :'<tr><td><b>'+esc(r.n)+'</b></td><td>'+fq[r.q]+'</td><td colspan="2">'+quando(r)+'</td><td>'+esc(r.hora||"—")+'</td><td>'+(+r.min||0)+'</td><td>'+(r.quem==="daily"?"Quem participa da daily":"Todos os membros")+'</td><td>'+tx+'<small class="ct" style="display:block">'+esc(nd>3?nd+" dias":proxs(r))+'</small></td></tr>'}).join("")+'</tbody></table>'+
-    '<div class="row" style="align-items:end;margin-top:.6em;gap:1em"><label class="f" style="flex:0 0 11em">A manhã começa às<input type="time" data-exp="m" value="'+E.m+'"'+(ADMIN?'':' disabled')+'></label><label class="f" style="flex:0 0 11em">A tarde começa às<input type="time" data-exp="t" value="'+E.t+'"'+(ADMIN?'':' disabled')+'></label>'+
+    '<div class="row" style="align-items:end;margin-top:.6em;gap:1em"><label class="f" style="flex:0 0 11em">A manhã começa às<input type="time" data-exp="m" value="'+E.m+'"'+(ADMIN?'':' disabled')+'></label><label class="f" style="flex:0 0 11em">A tarde começa às<input type="time" data-exp="t" value="'+E.t+'"'+(ADMIN?'':' disabled')+'></label><label class="f" style="flex:0 0 11em">A noite começa às<input type="time" data-exp="n" value="'+E.n+'"'+(ADMIN?'':' disabled')+'></label>'+
     '<p class="hint" style="flex:2;margin:0">A grade tem 4 partes de 1h em cada turno, sem relógio. Esses horários só servem pra saber em que parte cada rito cai (ex.: daily às 11:30 cai na 4ª parte da manhã).</p></div>'+
     (ADMIN?'<div class="dacts"><button class="btn" data-a="ritonovo">+ rito</button><button class="btn pri" data-a="ritosok">Salvar ritos</button></div>':'')+'</div>'}
   if(DEMO)h+='<div class="box"><h2>Dados da simulação</h2><p class="hint" style="margin:0 0 .7em">Baixa um arquivo com tudo o que está cadastrado neste navegador (equipe, projetos, ações, sprint), pra trabalhar com os mesmos dados fora daqui. Só existe na simulação.</p><button class="btn" data-a="baixadados">Baixar dados da simulação</button><div id="bdOut"></div></div>';
@@ -1586,7 +1603,7 @@ function drawSprint(){const sp=sprint();let h="";
     '<div class="dacts"><button class="btn" data-a="bolnovo">+ bolsista</button></div></div>';
   if(sp)h+='<div class="box"><h2>Atividades recorrentes</h2><p class="hint" style="margin:0 0 .7em">As recorrentes cadastradas nos projetos (e as internas) viram ações nesta sprint nos dias em que caem. Isso já acontece ao salvar uma recorrente e ao começar uma sprint nova; o botão abaixo refaz a conferência.</p>'+(()=>{const L=Object.entries(S.rec).filter(([,r])=>r&&r.ativo!==false);if(!L.length)return '<p class="empty">Nenhuma recorrente cadastrada. Cadastre em Projetos → Recorrentes.</p>';
     return '<table class="capt det"><thead><tr><th>Recorrente</th><th>Frente</th><th>Quem</th><th>Nesta sprint</th></tr></thead><tbody>'+L.map(([rid,r])=>{const oc=cardsSprint().filter(([,c])=>c.rec===rid).map(([,c])=>c.ini).sort();
-      return '<tr><td><b>'+esc(r.t)+'</b><small class="ct" style="display:block">'+esc(FREQ[r.freq]||"")+' · '+(+r.tu<4?"manhã":"tarde")+' · '+r.dur+'h · até '+dm(r.ate)+'</small></td><td>'+esc(r.pj&&S.projetos[r.pj]?S.projetos[r.pj].nome:(r.cat?"Interno":"—"))+'</td><td>'+esc((r.part||[]).map(nome).join(", "))+'</td><td>'+(oc.length?oc.map(d=>SEM[dow(d)]+" "+dm(d)).join(", "):'<span class="ct">nenhuma</span>')+'</td></tr>'}).join("")+'</tbody></table>'})()+
+      return '<tr><td><b>'+esc(r.t)+'</b><small class="ct" style="display:block">'+esc(FREQ[r.freq]||"")+' · '+turnoNome(+r.tu)+' · '+r.dur+'h · até '+dm(r.ate)+'</small></td><td>'+esc(r.pj&&S.projetos[r.pj]?S.projetos[r.pj].nome:(r.cat?"Interno":"—"))+'</td><td>'+esc((r.part||[]).map(nome).join(", "))+'</td><td>'+(oc.length?oc.map(d=>SEM[dow(d)]+" "+dm(d)).join(", "):'<span class="ct">nenhuma</span>')+'</td></tr>'}).join("")+'</tbody></table>'})()+
   '<div class="dacts"><button class="btn" data-a="gerarec">Conferir de novo</button></div></div>';
   if(DEMO)h+='<div class="box"><h2>Recomeçar o teste</h2><p class="hint" style="margin:0 0 .7em">Apaga tudo o que foi feito neste teste (só neste navegador) e começa uma sprint nova a partir de hoje. O banco de verdade não é tocado.</p><button class="btn" data-a="zerarteste">Apagar o teste e recomeçar</button></div>';
   h+='<div class="box"><h2>Trazer do quadro antigo</h2><p class="hint" style="margin:0 0 .7em">Copia as ações desta sprint do quadro antigo, com o estado de cada uma. O quadro antigo não muda. O que já foi trazido é pulado.</p>'+
@@ -1715,6 +1732,7 @@ document.addEventListener("focusout",()=>setTimeout(()=>{if(PEND)render()},50));
 
 /* ================= cliques ================= */
 document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
+  const tu=e.target.closest("[data-tur]");if(tu){const [pp,t]=tu.dataset.tur.split("|");TURF[pp+"|"+t]=!turnoFechado(pp,+t);try{localStorage.setItem("q2-tur",JSON.stringify(TURF))}catch(er){}render();return}
   const tb=e.target.closest("[data-tab]");if(tb){TAB=tb.dataset.tab;try{localStorage.setItem("q2-tab",TAB);history.replaceState(null,"","#"+TAB)}catch(er){}render();return}
   const eu=e.target.closest("[data-eu]");if(eu){MEU=eu.dataset.eu||null;try{MEU?localStorage.setItem("q2-eu",MEU):localStorage.removeItem("q2-eu")}catch(er){}render();scrollTo(0,0);return}
   const pu=e.target.closest("[data-pula]");if(pu&&ADMIN){setDaily({vez:+pu.dataset.pula,q:0});scrollTo({top:0,behavior:"smooth"});return}
@@ -1806,7 +1824,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "irsprint":fechar();TAB="sprint";try{history.replaceState(null,"","#sprint")}catch(er){}render();return;
   case "ritonovo":{const R=lerRitos();R.push({n:"",q:"sprint",dow:5,oc:"u",hora:"",min:60,quem:"todos"});DB.set("cfg","geral",{ritos:R});return}
   case "ritodel":{const R=lerRitos();R.splice(+b.dataset.i,1);DB.set("cfg","geral",{ritos:R});return}
-  case "ritosok":{const ex={};document.querySelectorAll("[data-exp]").forEach(el=>ex[el.dataset.exp]=el.value||(el.dataset.exp==="m"?"08:00":"13:00"));DB.set("cfg","geral",{ritos:lerRitos().filter(r=>r.n),exp:ex});const nl=liberaRitos();if(nl){toast(nl+"h de ações estavam no horário de um rito e voltaram pra encaixar");return}toast("Ritos salvos");return}
+  case "ritosok":{const ex={};document.querySelectorAll("[data-exp]").forEach(el=>ex[el.dataset.exp]=el.value||({m:"08:00",t:"13:00",n:"18:00"}[el.dataset.exp]));DB.set("cfg","geral",{ritos:lerRitos().filter(r=>r.n),exp:ex});const nl=liberaRitos();if(nl){toast(nl+"h de ações estavam no horário de um rito e voltaram pra encaixar");return}toast("Ritos salvos");return}
   case "prioadd":{const sp=sprint();const pr=priosDe(sp).slice();let it;
     if(b.dataset.t)it={t:b.dataset.t,pj:b.dataset.pj||null,d:b.dataset.d||null};else{const t=$("prT").value.trim();if(!t){$("prT").focus();return}it={t,pj:$("prPj").value||null}}
     pr.push(it);DB.set("sprints",S.cfg.sprint,{prios:pr});return}
@@ -1814,7 +1832,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "priodel":{const sp=sprint();const pr=priosDe(sp).slice();pr.splice(+b.dataset.i,1);DB.set("sprints",S.cfg.sprint,{prios:pr});return}
   case "compconf":{const sp=sprint();const c={...(sp.confComp||{})};c[id]=!c[id];DB.set("sprints",S.cfg.sprint,{confComp:c});return}
   case "compok":{const t=$("cpT").value.trim();const dias=[...document.querySelectorAll("[data-cpd]:checked")].map(x=>x.value);if(!t||!dias.length){$("cpErr").textContent="Escreva o que é e marque pelo menos um dia.";return}
-    const tu=$("cpTu").value,n=+$("cpN").value;const bl=[];dias.forEach(d=>{if(tu==="dia"){for(let i=0;i<8;i++)bl.push(d+"#"+i)}else for(let i=0;i<n;i++)bl.push(d+"#"+(+tu+i))});
+    const tu=$("cpTu").value,n=+$("cpN").value;const bl=[];dias.forEach(d=>{if(tu==="dia"){for(let i=0;i<NPT;i++)if(trabalha(b.dataset.p,i))bl.push(d+"#"+i)}else for(let i=0;i<n;i++)bl.push(d+"#"+(+tu+i))});
     DB.add("comp",{pessoa:b.dataset.p,sprint:S.cfg.sprint,t,blocos:bl,criado:Date.now(),por:QUEM});fechar();return}
   case "compdel":DB.set("comp",id,{apagado:true});fechar();return;
   case "pant":{const sp=sprint();DB.set("sprints",S.cfg.sprint,{pstep:Math.max(0,(sp.pstep||0)-1)});return}
@@ -1892,7 +1910,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
     const dup=Object.entries(S.pessoasX).find(([k,x])=>x&&k!==id&&(x.email||"").toLowerCase()===em&&em);if(dup){$("meErr").textContent="Esse e-mail já é de "+dup[1].n+".";return}
     const velho=id&&S.pessoasX[id];if(velho&&velho.temAcesso&&(velho.email||"").toLowerCase()!==em){$("meErr").textContent="Essa pessoa já tem acesso com outro e-mail. Desligue e crie de novo, ou fale comigo.";return}
     const pid=id||(em&&em===String(QUEM).toLowerCase()&&MEU&&!S.pessoasX[MEU]?MEU:null)||(n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g,"").slice(0,12)+"-"+nid().slice(-3));const papel=$("meO").value;const org=["org","coord"].includes(papel);
-    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),ativo:true,...(!id&&pid===MEU?{temAcesso:true}:{})});atualizaConta(pid,{org,papel});fechar();return}
+    DB.set("pessoas",pid,{n,tipo:"membro",email:em,papel,org,daily:temRaia({papel})&&$("meD").checked,hdia:Math.max(1,Math.min(8,+$("meH").value||8)),hini:+($("meI")?$("meI").value:0)||0,ativo:true,...(!id&&pid===MEU?{temAcesso:true}:{})});atualizaConta(pid,{org,papel});fechar();return}
   case "memfim":DB.set("pessoas",id,{ativo:false});atualizaConta(id,{ativo:false});fechar();toast("Desligado: o acesso parou de funcionar.");return;
   case "memvolta":DB.set("pessoas",id,{ativo:true});fechar();toast("Religado. Crie um acesso novo com senha provisória.");return;
   case "senha":{const m=S.pessoasX[id];if(!m.email){toast("Cadastre o e-mail corporativo antes.");gMem(id);return}gSenha(id);return}
@@ -1900,7 +1918,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "bolnovo":gBol(null);return;
   case "boledit":gBol(id);return;
   case "bolok":{const n=$("boN").value.trim(),r=$("boR").value;if(!n||!r){$("boErr").textContent="Nome e membro responsável são obrigatórios.";return}
-    DB.set("pessoas",id||("bol-"+nid()),{n,tipo:"bolsista",resp:r,hsem:+$("boH").value||20,pjs:[...document.querySelectorAll("[data-bop]:checked")].map(x=>x.value),pj:null,ativo:true});fechar();return}
+    DB.set("pessoas",id||("bol-"+nid()),{n,tipo:"bolsista",resp:r,hsem:+$("boH").value||20,hini:+($("boI")?$("boI").value:0)||0,pjs:[...document.querySelectorAll("[data-bop]:checked")].map(x=>x.value),pj:null,ativo:true});fechar();return}
   case "bolfim":DB.set("pessoas",id,{ativo:false});fechar();return;
   case "pjimport":{const grupos={};Object.entries(S.cards).forEach(([cid,x])=>{if(x&&!x.apagado&&x.proj&&!x.pj)(grupos[x.proj]=grupos[x.proj]||[]).push([cid,x])});
     Object.entries(grupos).forEach(([nm,cs])=>{const cont={};cs.forEach(([,x])=>cont[x.dono]=(cont[x.dono]||0)+1);const dono=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0][0];const pid="pj-"+nid();

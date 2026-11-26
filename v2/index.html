@@ -65,6 +65,7 @@ details.fsec>summary{list-style:none;cursor:pointer;display:flex;gap:.6em;align-
 .gleg .lh{border-color:#c99700}.gleg .lp{border-top:2px dashed var(--blue)}.gleg .lm{width:10px;height:10px;border:0;background:var(--no);border-radius:2px}
 @media(max-width:640px){.gr{grid-template-columns:7em minmax(0,1fr)}.gd{display:none}}
 select.alerta{border-color:var(--orange)!important;box-shadow:0 0 0 3px var(--orangeL)}
+.lnk.bkt{text-align:left;font:inherit;color:var(--ink);padding:0;display:block}.lnk.bkt:hover{color:var(--blue);text-decoration:underline}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -1183,7 +1184,7 @@ function gBacklog(id){const P=S.projetos[id];const pode=ADMIN||P.dono===MEU;cons
   const grupos=ets.map((n,i)=>[n,todas.filter(([,c])=>c.etp===n),i]);
   const outros=todas.filter(([,c])=>!ets.includes(c.etp));if(outros.length||!grupos.length)grupos.push([grupos.length?"Sem etapa":"",outros,-1]);
   const nb=todas.filter(([,c])=>!c.sprint&&c.estado!=="conc").length,nc=todas.filter(([,c])=>c.estado==="conc").length;
-  const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span>'+esc(c.t)+'<small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
+  const li=([cid,c])=>{const [k,tx]=st(c);return '<div class="li"><span><button class="lnk bkt" data-a="bkver" data-id="'+cid+'" data-bk="'+id+'">'+esc(c.t)+'</button><small>'+[FASES[c.fase],c.esf?c.esf+"h":"",nome(c.dono)].filter(Boolean).map(esc).join(" · ")+'</small></span><span class="bt">'+(k==="back"?'':'<span class="eapst '+k+'">'+tx+'</span>')+
     
     ((pode||podeMexer(c))?'<button class="btn sm" data-a="editar" data-id="'+cid+'" data-bk="'+id+'">Editar</button>':'')+'</span></div>'};
   abrir('<h2>Backlog · '+esc(P.nome)+'</h2><p class="ct">'+todas.length+' ações · '+nb+' no backlog · '+nc+' concluídas'+(ets.length?' · etapa atual: <b>'+esc(ets[P.etapa||0]||"")+'</b>':'')+'</p>'+
@@ -1438,12 +1439,16 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   if(e!=="conc")L.push(b("sit","Atualizar a situação (em que ponto está)"));
   L.push(b("pessoas","Passar pra outra pessoa ou fazer junto"),b("editar","Editar ação, resultado, projeto, fase, prazo…"));
   L.push(b("apagar","Tirar da sprint","no"));
-  const P=c.pj&&S.projetos[c.pj];const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];
-  const det=[["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
-    ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1]);
-  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
+  const det=detCard(c);
+  const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
+function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];return [["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
+    ["Na grade",onde||(c.sprint?"ainda não encaixada":"")],["Depende de",dep?dep.t+" ("+nome(dep.dono)+", "+EST[dep.estado]+")":""],["Acompanha",aco?aco.t+" ("+nome(aco.dono)+")":""],["Situação",c.sit],["Trava",c.estado==="trav"&&c.trava?c.trava.txt+(c.trava.ajuda?" · ajuda: "+nome(c.trava.ajuda):""):""]].filter(x=>x[1])}
+function gBkVer(cid,pj){const c=S.cards[cid];if(!c)return;const det=detCard(c);const pode=podeMexer(c)||ADMIN||(S.projetos[pj]||{}).dono===MEU;
+  abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono)||"sem responsável")+(c.estado==="conc"?' · concluída':c.sprint===S.cfg.sprint?' · nesta sprint':'')+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
+   (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+
+   '<div class="bts"><button class="btn esq" data-a="bkvolta" data-bk="'+pj+'">← Backlog</button>'+(pode?'<button class="btn pri" data-a="editar" data-id="'+cid+'" data-bk="'+pj+'">Editar</button>':'')+'</div>')}
 function gTravar(id){const c=S.cards[id];
   abrir('<h2>Travar</h2><p class="ct">'+esc(c.t)+'</p><label class="f">O que está travando?<textarea id="tvTxt" rows="2" placeholder="Aguardando retorno do cliente sobre o sensor"></textarea></label>'+
    '<label class="f">Quem pode ajudar?<select id="tvAj"><option value="">—</option>'+pessoasOpt("",c.dono)+'<option value="fora">Alguém de fora da equipe</option></select></label>'+
@@ -1547,6 +1552,7 @@ document.addEventListener("click",e=>{if(ARRASTOU){ARRASTOU=false;return}
   case "bkdel":{if(!precisa())return;const pj=b.dataset.bk;abrir('<h2>Excluir ação?</h2><p><b>'+esc(c.t)+'</b></p><p class="ct">Ela sai do backlog e de qualquer sprint.'+(c.estado==="conc"?' Atenção: esta ação já foi concluída e sai também do histórico da sprint.':'')+'</p><div class="bts"><button class="btn" data-a="bkvolta" data-bk="'+pj+'">Cancelar</button><button class="btn pri no" data-a="bkdelok" data-id="'+id+'" data-bk="'+pj+'">Excluir</button></div>');return}
   case "bkdelok":{if(!precisa())return;DB.set("cards",id,{apagado:true,atualizado:Date.now()});logMov(id,c,c.estado,c.estado,"ação excluída");toast("Ação excluída");if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return}
   case "edcanc":if(VOLTA){const v=VOLTA;VOLTA=null;v()}else fechar();return;
+  case "bkver":gBkVer(id,b.dataset.bk);return;
   case "bkvolta":if(b.dataset.bk)gBacklog(b.dataset.bk);else fechar();return;
   case "editok":{if(!confEsf($("edE"),null))return;let ini=$("edI").value||null,fim=$("edF").value||null;if(ini&&fim&&fim<ini)fim=ini;const fr=lerFrente($("edFr").value);const vt=$("edVt").value,vc=$("edVc").value;
     DB.set("cards",id,{t:$("edT").value.replace(/\s+/g," ").trim()||c.t,res:$("edR").value.trim()||null,sit:$("edS").value.trim()||null,...fr,etp:$("edEt").value||null,proj:(fr.pj||fr.cat)?null:(c.proj||null),fase:$("edFa").value||null,

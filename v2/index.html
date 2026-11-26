@@ -310,6 +310,7 @@ td.grito{background:#dfe3ee!important;color:#3b4766;border-left:4px solid #7d8aa
 .tat td,.tat th{vertical-align:middle}.tat .lnk{font-weight:700}
 .ficha .prevbox{display:flex;flex-direction:column;align-items:flex-end;gap:.2em;min-width:9em}
 .ficha .prevbox b{font-family:var(--display);font-weight:400;font-size:2em;color:var(--blue2);line-height:1}
+.ficha .prevbox .pfoco{color:var(--ink);font-weight:600;max-width:20em;text-align:right}.ficha .prevbox .pconc{margin-top:.35em}.ficha .prevbox .pconc b{font-family:inherit;font-size:1em;color:var(--muted);font-weight:700}
 .ficha .prevbox small{color:var(--muted);font-size:.75em}
 .ficha .sub2{font-size:.75em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:.4em 0 .3em}
 .ficha p{margin:0}
@@ -1094,7 +1095,7 @@ function ganttHtml(rows,marcosP,pv,tit){
   const linhas=rows.map(c=>{let bar="";if(c.ini&&c.fim){const l=x(c.ini),w=Math.max(.8,x(addDias(c.fim,1))-l);bar='<b class="gb '+c.k+'" style="left:'+l+'%;width:'+w+'%"></b>'}
     return '<div class="gr"><span class="gn">'+c.l+'</span><div class="gt">'+grade+hojeL+prevL+bar+'</div><span class="gd">'+c.dd+'</span></div>'}).join("");
   const faixa=mk.length?'<div class="gr gmk"><span class="gn"><b>Marcos</b></span><div class="gt" style="height:'+(nN*1.55+.3)+'em">'+grade+hojeL+prevL+mk.map(o=>'<span class="gm'+(o.m.data<HOJE?" pass":"")+'" style="left:'+o.p+'%;top:'+(o.n*1.55+.25)+'em" title="M'+o.i+' · '+esc(o.m.t)+' · '+dm(o.m.data)+'">M'+o.i+'</span>').join("")+'</div><span></span></div>':'';
-  const rodape=pv?'<div class="gleg"><span><i class="lh"></i>hoje</span><span><i class="lp"></i>fim previsto '+dm(pv)+'</span>'+(mk.length?'<span><i class="lm"></i>marco (Mn = número na lista)</span>':'')+'</div>':'<div class="gleg"><span><i class="lh"></i>hoje</span>'+(mk.length?'<span><i class="lm"></i>marco</span>':'')+'</div>';
+  const rodape=pv?'<div class="gleg"><span><i class="lh"></i>hoje</span><span><i class="lp"></i>fim previsto '+dm(pv)+(pv.slice(0,4)!==HOJE.slice(0,4)?'/'+pv.slice(0,4):'')+'</span>'+(mk.length?'<span><i class="lm"></i>marco (Mn = número na lista)</span>':'')+'</div>':'<div class="gleg"><span><i class="lh"></i>hoje</span>'+(mk.length?'<span><i class="lm"></i>marco</span>':'')+'</div>';
   return '<div class="sub2">'+tit+'</div><div class="gant">'+cab+linhas+faixa+'</div>'+rodape}
 
 function respAt(pid,a){if(a.resp)return a.resp;const cont={};Object.values(S.cards).forEach(c=>{if(c&&!c.apagado&&c.pj===pid&&c.at===a.id)cont[c.dono]=(cont[c.dono]||0)+1});const o=Object.entries(cont).sort((x,y)=>y[1]-x[1])[0];return o?o[0]:null}
@@ -1163,7 +1164,12 @@ function gFichaPj(pid){const P=S.projetos[pid];if(!P)return;const et=P.etapas||[
   const pode=ADMIN||P.dono===MEU;
   abrir('<div class="ficha"><div class="fh2"><div><div class="kick2">'+(P.tipo==="servico"?"Serviço":"Projeto")+(P.cliente?' · '+esc(P.cliente):'')+'</div><h2 style="font-size:2em">'+esc(P.nome)+'</h2>'+
      '<div class="ct">Responsável: <b>'+esc(nome(P.dono)||"—")+'</b>'+(bols.length?' · bolsistas: '+esc(bols.map(b=>b.n).join(", ")):'')+'</div></div>'+
-     '<div class="prevbox"><span class="stt '+st[0]+'">'+st[1]+'</span><b>'+esc(pv?fDia(pv):pm?fDia(pm.data):"—")+'</b><small>'+(pv?(fimEt?"previsão de conclusão":"previsão dos atendimentos"):pm?"próximo marco":"sem previsão")+'</small></div></div>'+
+     (()=>{/* destaque = o que vem primeiro: fim da etapa atual ou próximo marco; a conclusão do projeto fica pequena */
+      const fe=(cr[at]||{}).fim;const cand=[];if(fe&&fe>=HOJE)cand.push([fe,"fim da etapa atual",et[at]||""]);if(pm)cand.push([pm.data,"próximo marco",pm.t]);cand.sort((x,y)=>x[0]<y[0]?-1:1);const f0=cand[0];
+      const MES=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];const mA=d=>MES[+d.slice(5,7)-1]+"/"+d.slice(0,4);
+      const dA=d=>fDia(d)+(d.slice(0,4)!==HOJE.slice(0,4)?"/"+d.slice(2,4):"");
+      return '<div class="prevbox"><span class="stt '+st[0]+'">'+st[1]+'</span>'+(f0?'<b>'+esc(dA(f0[0]))+'</b><small>'+f0[1]+'</small><small class="pfoco">'+esc(f0[2].length>48?f0[2].slice(0,46)+"…":f0[2])+'</small>':'<b>—</b><small>sem próximo marco</small>')+
+        (pv?'<small class="pconc">conclusão '+(fimEt?"do projeto":"dos atendimentos")+': <b>'+mA(pv)+'</b></small>':'')+'</div></div>'})()+
    '<div class="sub2">Etapas</div>'+trilha+ganttEt+leitura+ganttAt+(tabAt?'<div class="sub2">Atendimentos</div>'+tabAt:'')+
    '<div class="grid2" style="margin-top:.8em"><div><div class="sub2">Situação atual</div><p>'+(P.sit?esc(P.sit):'<span class="empty">Sem descrição. '+(pode?'Use "Editar" pra escrever em que ponto está.':'')+'</span>')+'</p>'+
      (atencao.length?'<div class="sub2" style="color:var(--no)">Pontos de atenção</div><ul class="ful">'+atencao.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>':'')+'</div>'+

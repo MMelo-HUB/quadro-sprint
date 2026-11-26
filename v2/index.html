@@ -87,6 +87,9 @@ details.rbk>summary b{color:var(--blue2);font-size:1.05em;margin-right:.3em}deta
 .prt{align-self:flex-start;font-size:.7em;font-weight:800;border-radius:6px;padding:0 .4em;text-transform:uppercase;letter-spacing:.03em}.prt.urg{background:#fde2e2;color:#a12a2a}.prt.imp{background:#fff1dc;color:#9a4b00}.prt.med{background:#e7efff;color:#2c4ea0}
 .sbghost{position:fixed;z-index:99;pointer-events:none;opacity:.9;box-shadow:0 6px 18px rgba(0,0,0,.18);border-color:var(--orange)!important;background:var(--orangeL)!important}.sbm.arrastando{opacity:.4}body.sbdrag{cursor:grabbing;user-select:none}button.sbm{touch-action:none}
 .sbh{display:flex;align-items:center;gap:.6em;flex-wrap:wrap}.sbparte{margin-left:auto;font-size:.9em;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:.4em}.sbparte select{width:auto;font-size:.95em;padding:.15em .3em}
+.grade td.gcard{position:relative;user-select:none;-webkit-user-select:none}.grade td[data-drag]{cursor:grab;touch-action:none}.rsz{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:26px;height:9px;border-radius:5px;background:rgba(255,255,255,.85);border:1px solid rgba(0,0,0,.25);cursor:ns-resize;touch-action:none;z-index:3}
+.rsz::before{content:"";position:absolute;left:6px;right:6px;top:3px;border-top:1px solid rgba(0,0,0,.45);border-bottom:1px solid rgba(0,0,0,.45);height:1px}.grade td.gcard:not(:hover) .rsz{opacity:.55}
+.rszov{position:fixed;z-index:98;pointer-events:none;border:2px dashed var(--blue);background:rgba(37,99,235,.10);border-radius:8px;display:flex;align-items:flex-end;justify-content:center;font-weight:800;color:var(--blue2);font-size:.8em;padding-bottom:2px}body.rszando{cursor:ns-resize;user-select:none}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -892,12 +895,12 @@ function gradeHtml(p){const dias=diasSp();const m=ocup(p);const mk=ritoMarcas(p)
       if(v.k==="comp")return '<td class="gcomp" rowspan="'+n+'" data-k="'+k+'" data-n="'+n+'" data-gc="'+v.id+'" title="'+esc(v.t)+'">'+cx(n,'<b>'+esc(v.t)+'</b><small>'+n+'h</small>')+'</td>';
       const c=S.cards[v.id]||{};const cor=corFrente(c);usados.set(projNome(c).split(" › ")[0]||"Sem frente",cor);
       return '<td class="gcard'+(SEL===v.id?" sel":"")+(c.estado==="conc"?" gconc":"")+'" rowspan="'+n+'" style="--c:'+cor+'" data-k="'+k+'" data-n="'+n+'" data-gk="'+k+'" data-gid="'+v.id+'"'+(podeMexer(c)?' data-drag="1"':'')+' title="'+esc(c.t+" · "+(projNome(c)||"sem frente")+" · "+EST[c.estado])+'">'+
-        cx(n,'<b>'+(c.estado==="conc"?"✓ ":"")+esc(c.t)+'</b><small>'+n+'h'+(projNome(c)?' · '+esc(projNome(c)):'')+'</small>'+Array.from({length:n},(_,j)=>mkh(d+"#"+(pt+j),j)).join(""))+'</td>'}).join("")+'</tr>'}
+        cx(n,'<b>'+(c.estado==="conc"?"✓ ":"")+esc(c.t)+'</b><small>'+n+'h'+(projNome(c)?' · '+esc(projNome(c)):'')+'</small>'+Array.from({length:n},(_,j)=>mkh(d+"#"+(pt+j),j)).join("")+(podeMexer(c)&&c.estado!=="conc"?'<i class="rsz" title="Arraste pra aumentar ou diminuir"></i>':''))+'</td>'}).join("")+'</tr>'}
   h+='</tbody></table></div>';
   if(usados.size||Object.values(m).some(v=>v.k==="comp"))h+='<div class="leg">'+[...usados].map(([nm,cor])=>'<span><i style="background:'+cor+'"></i>'+esc(nm)+'</span>').join("")+(Object.values(m).some(v=>v.k==="comp")?'<span><i style="background:#c3cad8"></i>compromisso fixo</span>':'')+'<span>✓ concluída</span></div>';
   return h}
 function salvaBlocos(id,nb){nb=[...new Set(nb)].sort();const c=S.cards[id];DB.set("cards",id,{blocos:nb,ini:nb.length?nb[0].split("#")[0]:(c.ini||null),atualizado:Date.now()})}
-let TRECHO=null;let PARTE=0;try{PARTE=+localStorage.getItem("q2-parte")||0}catch(e){}
+let TRECHO=null;const PARTE=0;
 function encaixa(id,k){const c=S.cards[id];if(!c)return;if(!podeMexer(c)){toast("Só quem é da raia mexe nessa ação.");return}
   const [d,pt0]=k.split("#");const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
   const total=(+c.esf||1)-(c.blocos||[]).length;let rest=PARTE?Math.min(PARTE,total):total;if(total<=0){toast("Essa ação já está toda na grade.");SEL=null;render();return}const sobra=total-rest;
@@ -916,7 +919,7 @@ let ARRASTOU=false;
 (function(){let D=null;
   const alvo=(x,y)=>{const el=document.elementFromPoint(x,y);const td=el&&el.closest(".grade td[data-k]");if(!td)return {fora:!(el&&el.closest(".grade"))};
     const r=td.getBoundingClientRect();const n=+td.dataset.n||1;const j=Math.max(0,Math.min(n-1,Math.floor((y-r.top)/r.height*n)));const [d,pt]=td.dataset.k.split("#");return {k:d+"#"+(+pt+j),td}};
-  document.addEventListener("pointerdown",e=>{const td=e.target.closest(".grade td[data-drag]");if(!td||e.button>0)return;
+  document.addEventListener("pointerdown",e=>{if(e.target.closest(".rsz"))return;const td=e.target.closest(".grade td[data-drag]");if(!td||e.button>0)return;e.preventDefault();
     const r=td.getBoundingClientRect();const n=+td.dataset.n||1;const j=Math.floor((e.clientY-r.top)/r.height*n);
     D={id:td.dataset.gid,de:td.dataset.gk,n,j:Math.max(0,Math.min(n-1,j)),x:e.clientX,y:e.clientY,td,on:false}});
   document.addEventListener("pointermove",e=>{if(!D)return;if(!D.on){if(Math.hypot(e.clientX-D.x,e.clientY-D.y)<6)return;D.on=true;
@@ -929,6 +932,22 @@ let ARRASTOU=false;
     if(!d.on)return;ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);d.g.remove();
     if(d.fora){moveTrecho(d.id,d.de,d.n,null);return}if(!d.para)return;
     const [pd,pp]=d.para.split("#");moveTrecho(d.id,d.de,d.n,pd+"#"+(+pp))};
+  document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
+/* alça do bloco: puxar pra baixo aumenta (até o fim do turno, sem invadir, usando o que falta encaixar); pra cima diminui (volta pra "falta encaixar") */
+(function(){let R=null;
+  document.addEventListener("pointerdown",e=>{const h=e.target.closest(".rsz");if(!h||e.button>0)return;const td=h.closest(".grade td[data-gid]");if(!td)return;e.preventDefault();e.stopPropagation();
+    const id=td.dataset.gid,c=S.cards[id];if(!c||!podeMexer(c))return;const n0=+td.dataset.n||1;const [d,p0s]=td.dataset.gk.split("#");const p0=+p0s;
+    const parts=[c.dono,...(c.com||[])].filter(Boolean);const m={};parts.forEach(x=>Object.assign(m,ocup(x)));Object.keys(m).forEach(b=>{if(m[b].id===id)delete m[b]});
+    const lim=Math.min(...parts.map(partesDia));const fimT=Math.min(lim,p0<4?4:8);let livre=0;for(let p=p0;p<fimT&&!m[d+"#"+p];p++)livre++;
+    const falta=Math.max(0,(+c.esf||1)-(c.blocos||[]).length);const maxN=Math.max(n0,Math.min(livre,n0+falta));
+    const r=td.getBoundingClientRect();R={id,c,d,p0,n0,n:n0,maxN,falta,livre,rowH:r.height/n0,r,ov:document.createElement("div")};R.ov.className="rszov";document.body.appendChild(R.ov);desenha();document.body.classList.add("rszando")},true);
+  const desenha=()=>{const o=R.ov;o.style.left=R.r.left+"px";o.style.top=R.r.top+"px";o.style.width=R.r.width+"px";o.style.height=(R.rowH*R.n)+"px";o.textContent=R.n+"h"};
+  document.addEventListener("pointermove",e=>{if(!R)return;e.preventDefault();const n=Math.max(1,Math.min(R.maxN,Math.round((e.clientY-R.r.top)/R.rowH+.25)));if(n!==R.n){R.n=n;desenha()}
+    R.r=document.querySelector('.grade td[data-gid="'+R.id+'"][data-gk="'+R.d+"#"+R.p0+'"]')?.getBoundingClientRect()||R.r});
+  const fim=e=>{if(!R)return;const x=R;R=null;x.ov.remove();document.body.classList.remove("rszando");ARRASTOU=true;setTimeout(()=>ARRASTOU=false,50);
+    if(x.n===x.n0){const alvo=Math.round((e.clientY-x.r.top)/x.rowH+.25);if(alvo>x.n0)toast(x.falta?"Não cabe mais aqui: o turno acaba ou já tem outra coisa depois.":"Não há mais horas pra encaixar. Pra aumentar, mude o esforço em Editar.");return}
+    const velho=new Set(Array.from({length:x.n0},(_,j)=>x.d+"#"+(x.p0+j)));const nb=(x.c.blocos||[]).filter(b=>!velho.has(b));for(let j=0;j<x.n;j++)nb.push(x.d+"#"+(x.p0+j));
+    salvaBlocos(x.id,nb);render();toast(x.n<x.n0?(x.n0-x.n)+"h voltaram pra encaixar: arraste pra outro dia.":"Agora com "+x.n+"h aqui.")};
   document.addEventListener("pointerup",fim);document.addEventListener("pointercancel",fim)})();
 /* arrastar do Sprint Backlog direto pra grade (um clique continua selecionando) */
 (function(){let D=null;
@@ -991,7 +1010,7 @@ function sprintBk(p,pode){const L=cardsSprint().filter(([,c])=>ehDe(c,p)&&!c.rec
       (podeMexer(c)?'<button class="btn sm" data-a="menu" data-id="'+id+'" title="Opções da ação">⋯</button>':'')+'</div>'};
   const nFalta=L.filter(([,c])=>c.estado!=="conc"&&(+c.esf||1)>(c.blocos||[]).length).length;
   const parteSel='<label class="sbparte">Encaixar por vez <select id="sbParte">'+opts([["0","tudo que couber"],["1","1h"],["2","2h"],["4","4h · 1 turno"]],String(PARTE))+'</select></label>';
-  return '<div class="sub2 sbh">Sprint Backlog <small class="ct">'+L.length+' ação(ões)'+(nFalta?' · '+nFalta+' pra encaixar na grade':' · tudo encaixado')+(rec.length?' · '+rec.length+' recorrente(s)':'')+'</small>'+(pode&&nFalta?parteSel:'')+'</div>'+
+  return '<div class="sub2 sbh">Sprint Backlog <small class="ct">'+L.length+' ação(ões)'+(nFalta?' · '+nFalta+' pra encaixar na grade':' · tudo encaixado')+(rec.length?' · '+rec.length+' recorrente(s)':'')+'</small></div>'+
     (L.length?'<div class="sbk">'+grupos.map(g=>{const xs=g.xs.slice().sort(ord);const a=xs.filter(([,c])=>c.estado!=="conc"),cc=xs.filter(([,c])=>c.estado==="conc");
       return '<div class="sbg"><div class="sbgh"><b>'+esc(nomeK(g.k))+'</b><span class="ct">'+a.length+' em aberto'+(cc.length?' · '+cc.length+' concluída(s)':'')+'</span></div>'+a.map(linha).join("")+cc.map(linha).join("")+'</div>'}).join("")+'</div>':'<p class="empty">Nenhuma ação nesta sprint ainda. Traga do backlog abaixo ou crie em "+ nova ação".</p>')}
 function drawMinhaSprint(p){const sp=sprint();const C=capS(p);const pode=podeRaia(p);
@@ -1608,7 +1627,7 @@ function gMenu(id){const c=S.cards[id];const e=c.estado;const b=(a,l,k)=>'<butto
   L.push(b("apagar","Tirar da sprint","no"));
   const det=detCard(c);
   const P=c.pj&&S.projetos[c.pj];  if(c.blocos&&c.blocos.length&&podeMexer(c))L.splice(L.length-1,0,b("tiragrade","Tirar da grade (volta pra \"Para encaixar\")"));
-  if(TRECHO&&TRECHO.id===id&&TRECHO.n>1&&podeMexer(c))L.splice(L.length-1,0,b("dividir","Dividir este trecho ("+TRECHO.n+"h): deixar uma parte aqui e encaixar o resto em outro lugar"));
+
   abrir('<h2>'+esc(c.t)+'</h2><p class="ct">'+esc(nome(c.dono))+' · '+EST[e]+'</p>'+(c.res?'<p class="ct">→ '+esc(c.res)+'</p>':'')+
    (det.length?'<table class="capt det">'+det.map(([k,v])=>'<tr><td>'+k+'</td><td>'+esc(v)+'</td></tr>').join("")+'</table>':'')+'<div class="menu">'+L.join("")+'</div><div class="bts"><button class="btn" data-a="fechar">Fechar</button></div>')}
 function detCard(c){const onde=gradeTexto(c);const dep=c.dep&&S.cards[c.dep],aco=c.acomp&&S.cards[c.acomp];const pai=c.pai&&S.cards[c.pai]&&!S.cards[c.pai].apagado?S.cards[c.pai]:null;return [["Código",codTxt(c)],["Faz parte de",pai?posBk(pjDoCard(c),c.pai)+" · "+pai.t:""],["Status",STATX[statusDe(c)]+(statusDe(c)==="prog"?" · início "+fDia(c.ini):"")],["Projeto",projNome(c)],["Etapa",c.etp],["Fase",FASES[c.fase]],["Esforço",c.esf?c.esf+"h":"a definir"],["Prioridade",PRIS[priDe(c)-1][1]],["Com",(c.com||[]).map(nome).join(", ")],["Prazo",c.fim?fDia(c.fim):""],
@@ -1912,7 +1931,7 @@ document.addEventListener("keydown",e=>{const t=e.target;
     if(e.key==="ArrowLeft"){e.preventDefault();document.querySelector('[data-a="ant"]')?.click()}
     if(e.key===" "){e.preventDefault();$("bGo").click()}}});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.id==="sbParte"){PARTE=+t.value||0;try{localStorage.setItem("q2-parte",String(PARTE))}catch(x){}toast(PARTE?"Cada encaixe põe até "+PARTE+"h":"Cada encaixe põe tudo que couber");return}
+
   if(t.id==="naTp"&&t.value==="rec"){const tx=$("naT")?$("naT").value:"";const fr=$("naFr")?$("naFr").value:"";const cb=VOLTA;gRec(null,null,{t:tx,fr});VOLTA=cb;if(VOLTA){const c=document.querySelector('.sheet .bts [data-a=fechar]');if(c)c.dataset.a="edcanc"}return}
   if(t.id==="rcTp"&&t.value==="unica"){const tx=$("rcT")?$("rcT").value:"";const fr=$("rcFr")?$("rcFr").value:"";const cb=VOLTA;const u=ULT_ACAO||{p:MEU,o:{dest:"back"}};gAcao(u.p,{...u.o,tipo:fr.startsWith("c:")?fr.slice(2):u.o.tipo});VOLTA=cb;if($("naT")){$("naT").value=tx;checaAcao($("naT"))}if(VOLTA){const c=document.querySelector('.sheet .bts [data-a=fechar]');if(c)c.dataset.a="edcanc"}return}
   if(t.id==="impArq"&&t.files&&t.files[0]){const fr=new FileReader();fr.onload=()=>{try{const j=JSON.parse(fr.result);gImporta(j.dados||j)}catch(err){toast("Arquivo inválido: "+err.message)}t.value=""};fr.readAsText(t.files[0]);return}if(t.dataset&&t.dataset.rt&&t.dataset.rt.endsWith(":q")){const i=t.dataset.rt.split(":")[0];const d=document.querySelector('[data-rt="'+i+':dow"]'),o=document.querySelector('[data-rt="'+i+':oc"]');if(d)d.disabled=t.value==="dia";const di=document.querySelector('[data-rt="'+i+':datas"]');if(d)d.hidden=t.value==="datas";if(di){di.hidden=t.value!=="datas";if(!di.hidden)di.focus()}

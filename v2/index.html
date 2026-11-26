@@ -32,7 +32,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .sync[data-k=ok]::before{content:"● ";color:var(--ok)}
 .sync[data-k=warn]{color:var(--no)}
 .btn{border:1.5px solid var(--line);background:var(--paper);color:var(--blue2);border-radius:9px;padding:.4em .9em;font-weight:600}
-.etl{display:flex;flex-direction:column;gap:6px;margin:.3em 0 .5em;counter-reset:et}.etr{display:flex;gap:6px;align-items:center}.etr .etn::before{counter-increment:et;content:counter(et)".";font-weight:700;color:var(--muted);min-width:1.4em;display:inline-block}.etr .etnm{flex:1;min-width:0}.etr input[type=date]{width:auto}.etl:empty::after{content:"Nenhuma etapa ainda.";font-size:.85em;color:var(--muted)}
+.eth,.etr{display:grid;grid-template-columns:22px minmax(0,1fr) 140px 140px 30px 30px;gap:6px;align-items:center}.eth{font-size:.72em;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:.3em}.etr input[type=date]{width:100%}.eth>span{display:block;text-align:left;justify-content:flex-start;margin:0}.etl{display:flex;flex-direction:column;gap:6px;margin:.3em 0 .5em;counter-reset:et}.etr .etn::before{counter-increment:et;content:counter(et)".";font-weight:700;color:var(--muted);min-width:1.4em;display:inline-block}.etr .etnm{flex:1;min-width:0}.etr input[type=date]{width:auto}.etl:empty::after{content:"Nenhuma etapa ainda.";font-size:.85em;color:var(--muted)}
 .btn.no{color:var(--no);border-color:var(--no)}.btn.pri.no{background:var(--no);color:#fff}.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.or{background:var(--orange);border-color:var(--orange);color:#fff}
 .btn.big{font-size:1.15em;padding:.6em 1.4em;border-radius:12px}
@@ -1106,13 +1106,13 @@ function etpLinha(nomeE,o,c,comDatas){return '<div class="etr" data-o="'+(o==nul
   (comDatas?'<input type="date" class="eti" value="'+esc((c&&c.ini)||"")+'" title="Início"><input type="date" class="etf" value="'+esc((c&&c.fim)||"")+'" title="Fim">':'')+
   '<button class="btn sm" data-a="pjetsobe" title="Subir">↑</button><button class="btn sm no" data-a="pjetdel" title="Tirar esta etapa">✕</button></div>'}
 function gProj(id){const P=id?S.projetos[id]:{tipo:"projeto",dono:MEU||"",etapas:[],marcos:[],etapa:0};const ed=!!id;
-  const ets='<div class="f"><span style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Etapas do projeto</span>'+(ed?'<small class="ct">Início e fim de cada etapa ao lado do nome.</small>':'')+'<div id="pjEts" class="etl'+(ed?' datas':'')+'">'+
-    (P.etapas||[]).map((e,i)=>etpLinha(e,i,(P.cron||[])[i],ed)).join("")+'</div><button class="btn sm" data-a="pjetadd" data-ed="'+(ed?1:0)+'" style="align-self:flex-start">+ etapa</button></div>';
+  const ets='<div class="f"><span style="font-size:.78em;font-weight:700;color:var(--muted);text-transform:uppercase">Etapas do projeto</span>'+'<div class="eth"><span></span><span>Etapa</span><span>Início</span><span>Término</span></div><div id="pjEts" class="etl datas">'+
+    (P.etapas||[]).map((e,i)=>etpLinha(e,i,(P.cron||[])[i],true)).join("")+'</div><button class="btn sm" data-a="pjetadd" data-ed="1" style="align-self:flex-start">+ etapa</button></div>';
   const basico='<label class="f"><span>Nome<span class="req">*</span></span><input id="pjN" value="'+esc(P.nome||"")+'"></label>'+
    '<div class="row"><label class="f">Tipo<select id="pjT">'+opts([["projeto","Projeto (tem fim)"],["servico","Serviço (contínuo)"]],P.tipo)+'</select></label><label class="f">Responsável<select id="pjD"><option value="">—</option>'+pessoasOpt(P.dono)+'</select></label></div>'+
    '<label class="f">Contratante ou parceiro<input id="pjC" value="'+esc(P.cliente||"")+'" placeholder="Sebrae, Caixa…"></label>';
   const bts='<div class="bts">'+(id&&ADMIN?'<button class="btn esq no" data-a="pjdel" data-id="'+id+'">Excluir</button><button class="btn" data-a="pjarq" data-id="'+id+'">Arquivar</button>':'')+'<button class="btn" data-a="fechar">Cancelar</button><button class="btn pri" data-a="pjok" data-id="'+(id||"")+'">Salvar</button></div>';
-  if(!ed){abrir('<h2>Novo projeto ou serviço</h2>'+basico+ets+'<p class="ct">Situação, marcos, atendidos e cronograma você completa depois, em Editar.</p>'+bts);setTimeout(()=>{const n=$("pjN");if(n)n.focus()},50);return}
+  if(!ed){abrir('<h2>Novo projeto ou serviço</h2>'+basico+ets+'<p class="ct">Datas das etapas são opcionais. Situação, marcos e atendidos você completa depois, em Editar.</p>'+bts);setTimeout(()=>{const n=$("pjN");if(n)n.focus()},50);return}
   abrir('<h2>Editar</h2><div class="duas"><div>'+basico+
    '<label class="f">Situação atual<textarea id="pjS" rows="4" placeholder="Em que ponto o projeto está">'+esc(P.sit||"")+'</textarea></label>'+
    '<label class="f">Marcos do projeto<textarea id="pjM" rows="3" placeholder="15/12 Prestação de contas parcial">'+esc((P.marcos||[]).map(m=>dm(m.data)+(m.data.slice(0,4)!=="2026"?"/"+m.data.slice(0,4):"")+" "+m.t).join("\n"))+'</textarea></label>'+

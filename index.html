@@ -608,8 +608,9 @@ function keepFocus(fn){
   const a=document.activeElement,id=a&&a.id;let sel=null,txt=null;
   if(a&&(a.tagName==="INPUT"||a.tagName==="TEXTAREA")&&a.selectionStart!=null)sel=[a.selectionStart,a.selectionEnd];
   if(a&&a.isContentEditable)txt=a.textContent;
-  const vals={};document.querySelectorAll("[data-in],[data-tt],[data-pj],[data-kt],[data-pn],[data-kw]").forEach(i=>{vals[i.id]=i.value});
-  const hv=a&&a.dataset&&(a.dataset.h||a.dataset.tt||a.dataset.pj||a.dataset.trava)?a.value:null;
+  const vals={};document.querySelectorAll("[data-in],[data-tt],[data-pj],[data-kt],[data-pn],[data-kw],[data-rk],#blt,#blp").forEach(i=>{vals[i.id]=i.value});
+  /* o campo em que a pessoa está digitando nunca perde o texto quando outra pessoa mexe no quadro */
+  const hv=a&&((a.tagName==="INPUT"&&a.type!=="checkbox"&&a.type!=="radio")||a.tagName==="TEXTAREA")?a.value:null;
   fn();
   Object.entries(vals).forEach(([k,v])=>{const i=$(k);if(i)i.value=v});
   if(id){const b=$(id);if(b){
@@ -720,7 +721,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-bladd]"))blAdd()});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&e.target.dataset&&e.target.dataset.blf){e.preventDefault();e.stopPropagation();e.target.blur();return}if(e.key==="Enter"&&e.target&&(e.target.id==="blt"||e.target.id==="blp")){e.preventDefault();e.stopPropagation();blAdd()}},true);
 document.addEventListener("change",e=>{const t=e.target;if(!t||!t.dataset||readOnly)return;
-  if(t.dataset.blf){const c=D.cards[t.dataset.blk];const v=(t.dataset.blf==="t"||t.dataset.blf==="proj")?t.value.replace(/s+/g," ").trim():t.value;if(c&&!(t.dataset.blf==="t"&&!v))put("cards",t.dataset.blk,{...c,[t.dataset.blf]:v});e.stopPropagation();return}
+  if(t.dataset.blf){const c=D.cards[t.dataset.blk];const v=(t.dataset.blf==="t"||t.dataset.blf==="proj")?t.value.replace(/\s+/g," ").trim():t.value;if(c&&!(t.dataset.blf==="t"&&!v))put("cards",t.dataset.blk,{...c,[t.dataset.blf]:v});e.stopPropagation();return}
   if(t.dataset.blh&&MEU){put("hrs",MEU,{v:t.value.trim()});e.stopPropagation()}},true);
 
 /* ---------- daily ---------- */
